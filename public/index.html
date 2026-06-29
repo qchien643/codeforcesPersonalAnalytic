@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Phân tích học Codeforces</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar">
+        <div>
+          <p class="eyebrow">Phân tích Codeforces cá nhân</p>
+          <h1>Bảng theo dõi học tập</h1>
+        </div>
+        <form id="analyze-form" class="handle-form" onsubmit="return false;">
+          <label for="handle-input">Tên Codeforces</label>
+          <div class="handle-row">
+            <input id="handle-input" name="handle" type="text" autocomplete="off" placeholder="tourist" />
+            <button type="submit">Phân tích</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="status-panel" class="status-panel idle">
+        <span id="status-dot" class="status-dot"></span>
+        <span id="status-text">Nhập tên Codeforces để xem tình hình học hiện tại.</span>
+      </section>
+
+      <section id="dashboard" class="dashboard">
+        <section class="profile-strip panel">
+          <div class="profile-main">
+            <img id="avatar" alt="" class="avatar" />
+            <div>
+              <p class="eyebrow">Hồ sơ hiện tại</p>
+              <h2 id="profile-handle">-</h2>
+              <p id="profile-rank" class="muted">-</p>
+            </div>
+          </div>
+          <div class="stage-box">
+            <span class="label label-with-info">Giai đoạn học <button type="button" class="info-button" data-info-key="stage">!</button></span>
+            <strong id="learning-stage">-</strong>
+            <span id="learning-stage-reason" class="muted">-</span>
+          </div>
+        </section>
+
+        <section id="kpi-grid" class="kpi-grid"></section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Lịch hoạt động</h3>
+                <button type="button" class="info-button" data-info-key="activity">!</button>
+              </div>
+              <span class="muted">Số lần nộp theo ngày</span>
+            </div>
+            <div id="activity-heatmap" class="heatmap"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Xu hướng nộp bài</h3>
+                <button type="button" class="info-button" data-info-key="submissionTrend">!</button>
+              </div>
+              <span class="muted">20 tuần gần nhất</span>
+            </div>
+            <div id="submission-trend" class="chart"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Lịch sử điểm</h3>
+                <button type="button" class="info-button" data-info-key="ratingHistory">!</button>
+              </div>
+              <span class="muted">Điểm qua các vòng thi</span>
+            </div>
+            <div id="rating-history" class="chart"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Biến động vòng thi</h3>
+                <button type="button" class="info-button" data-info-key="contestDelta">!</button>
+              </div>
+              <span class="muted">Các vòng thi gần đây</span>
+            </div>
+            <div id="contest-delta" class="chart"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Phân bố kết quả nộp</h3>
+                <button type="button" class="info-button" data-info-key="verdicts">!</button>
+              </div>
+              <span class="muted">Các loại verdict</span>
+            </div>
+            <div id="verdict-chart" class="chart"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Độ phủ theo độ khó</h3>
+                <button type="button" class="info-button" data-info-key="buckets">!</button>
+              </div>
+              <span class="muted">Đã AC so với đã thử</span>
+            </div>
+            <div id="bucket-chart" class="chart"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Mức độ nắm chủ đề</h3>
+                <button type="button" class="info-button" data-info-key="topicMastery">!</button>
+              </div>
+              <span class="muted">Các chủ đề có điểm cao</span>
+            </div>
+            <div id="topic-mastery" class="topic-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Ma trận điểm yếu</h3>
+                <button type="button" class="info-button" data-info-key="weaknessMatrix">!</button>
+              </div>
+              <span class="muted">Chủ đề x nhóm độ khó</span>
+            </div>
+            <div id="weakness-matrix" class="matrix-wrap"></div>
+          </article>
+        </section>
+
+        <section class="grid two">
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Lộ trình học</h3>
+                <button type="button" class="info-button" data-info-key="learningPath">!</button>
+              </div>
+              <span class="muted">7-30 ngày tiếp theo</span>
+            </div>
+            <div id="learning-path" class="path-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div class="title-with-info">
+                <h3>Bài nên luyện tiếp</h3>
+                <button type="button" class="info-button" data-info-key="recommendations">!</button>
+              </div>
+              <span class="muted">Khởi động, trọng tâm, thử thách</span>
+            </div>
+            <div id="recommendations" class="problem-list"></div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="title-with-info">
+              <h3>Đã thử nhưng chưa AC</h3>
+              <button type="button" class="info-button" data-info-key="attemptedUnsolved">!</button>
+            </div>
+            <span class="muted">Các bài còn tồn gần đây</span>
+          </div>
+          <div id="attempted-unsolved" class="table-wrap"></div>
+        </section>
+      </section>
+    </main>
+
+    <div id="floating-tooltip" class="floating-tooltip" role="tooltip"></div>
+    <script src="./data.js"></script>
+    <script src="./analytics.js"></script>
+    <script src="./codeforces-api.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

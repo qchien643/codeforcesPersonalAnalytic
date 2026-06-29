@@ -1,0 +1,70 @@
+# Product Design - Codeforces Learning Analytics
+
+Bo tai lieu nay thiet ke mot he thong phan tich so lieu va toi uu lo trinh hoc cho mot nguoi hoc competitive programming dua tren tai khoan Codeforces.
+
+San pham khong phai online judge, khong thay the Codeforces va khong tap trung vao social/team. Gia tri chinh la doc du lieu cong khai cua mot Codeforces handle, bien no thanh dashboard hoc tap, chan doan diem yeu va lo trinh bai tap tiep theo.
+
+## Scope da chot
+
+- Input chinh: Codeforces username/handle.
+- Data source chinh: Codeforces API cong khai.
+- Doi tuong phan tich: mot profile Codeforces tai mot thoi diem.
+- Output chinh: thong ke, tien do hoc hien tai, topic mastery, weak areas, learning path va problem recommendations.
+- Vong lap san pham: sync data -> analyze -> diagnose -> recommend -> user luyen tren Codeforces -> sync lai.
+
+## Tai lieu trong thu muc
+
+- `PRODUCT_SPEC.md`: ban dac ta chinh de trien khai MVP.
+- `00-scope.md`: pham vi san pham da chot.
+- `01-product-analysis.md`: bai toan, nguoi dung, gia tri cot loi, metric thanh cong.
+- `02-feature-spec.md`: module chuc nang cho dashboard analytics va learning path.
+- `03-learning-model.md`: cach tinh mastery, weakness, learning stage va recommendation.
+- `04-system-architecture.md`: kien truc static-only, `data.js`, Codeforces client va analytics pipeline.
+- `05-data-model.md`: model runtime hien tai va bang du lieu neu mo rong backend sau MVP.
+- `06-roadmap.md`: lo trinh phat trien theo giai doan.
+- `07-mvp-backlog.md`: backlog co the dua thang vao task code.
+- `08-input-output-spec.md`: dac ta dau vao, dau ra va contract API/UI.
+- `09-algorithm-design.md`: thuat toan danh gia nguoi hoc va sinh learning path.
+- `10-research-notes.md`: nghien cuu IRT, BKT, PFA, HLR, DKT va recommender.
+- `11-features-and-charts.md`: danh sach tinh nang va chart se trien khai cho dashboard ca nhan.
+
+## MVP nen xay truoc
+
+1. Nguoi dung nhap Codeforces handle.
+2. Browser doc problemset tu `public/data.js`.
+3. Browser goi Codeforces API de lay profile, submissions va rating changes.
+4. He thong tinh solved/attempted, tag stats, rating bucket stats, verdict distribution va activity trend.
+5. He thong xac dinh giai doan hoc hien tai: foundation, building, contest-ready, advanced.
+6. He thong tao learning path 1-4 tuan voi topic uu tien va danh sach bai de xuat.
+7. Sau khi nguoi dung luyen tren Codeforces, bam phan tich lai de cap nhat tien do.
+
+## Analytics principle
+
+Nen uu tien cac model de giai thich trong MVP:
+
+- IRT/Rasch-style: uoc luong kha nang so voi do kho bai.
+- PFA/BKT-style: uoc luong mastery theo topic dua tren chuoi correct/incorrect.
+- Half-life/staleness: topic lau khong luyen thi diem tu tin giam dan.
+- Ranking/recommender: chon bai bang weak topic + difficulty fit + quality + diversity.
+
+## Stack hien tai
+
+- Frontend: static HTML/CSS/JavaScript.
+- Analytics: JavaScript module chay trong browser.
+- Data: `public/data.js` cho problemset, RAM cho du lieu ca nhan trong tab hien tai.
+- Localhost: Node `server.js` chi phuc vu file tinh.
+- Backend/database/queue: khong bat buoc cho MVP; de sau neu can cloud app multi-user.
+
+## Codeforces API
+
+Can uu tien cac endpoint cong khai:
+
+- `user.info`
+- `user.status`
+- `user.rating`
+- `problemset.problems`
+
+Nguon tham khao:
+
+- https://codeforces.com/apiHelp
+- https://codeforces.com/apiHelp/methods

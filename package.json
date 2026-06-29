@@ -1,0 +1,14 @@
+{
+  "name": "codeforces-learning-analytics",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build:problemset": "node scripts/build-problemset.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

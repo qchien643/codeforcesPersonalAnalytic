@@ -1,0 +1,1 @@
+nhấn đúp vào file index.html để sử dụng , nhập tên acc codeforces vào nhấn phân tích
