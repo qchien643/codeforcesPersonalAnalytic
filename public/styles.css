@@ -424,6 +424,100 @@ h3 {
   gap: 8px;
 }
 
+.activity-summary {
+  display: grid;
+  gap: 14px;
+}
+
+.activity-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.activity-tabs button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefa;
+  color: var(--muted);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.activity-tabs button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.activity-focus {
+  min-height: 136px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffefa;
+  padding: 18px;
+}
+
+.activity-focus .label {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.activity-focus strong {
+  display: block;
+  margin: 8px 0 2px;
+  color: var(--accent);
+  font-size: clamp(44px, 9vw, 72px);
+  line-height: 0.95;
+}
+
+.activity-focus span:last-child {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.activity-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.activity-metrics span {
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+  padding: 8px;
+  font-size: 12px;
+}
+
+.activity-metrics b {
+  display: block;
+  color: var(--text);
+  font-size: 18px;
+}
+
+.heatmap-toggle {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.heatmap-toggle summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.heatmap-toggle .heatmap {
+  margin-top: 10px;
+}
+
 .heatmap-months {
   display: grid;
   grid-template-columns: repeat(53, minmax(6px, 1fr));
@@ -862,6 +956,11 @@ table.data-table {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .activity-tabs,
+  .activity-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .topic-row {
     grid-template-columns: 1fr;
   }
@@ -877,6 +976,11 @@ table.data-table {
 
 @media (max-width: 460px) {
   .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-tabs,
+  .activity-metrics {
     grid-template-columns: 1fr;
   }
 }

@@ -51,7 +51,7 @@ Nen uu tien cac model de giai thich trong MVP:
 
 - `masteryScore`: giai thich muc nam chu de hien tai.
 - `strengthScore`: dung de sap xep bang chu de nam tot nhat.
-- `weaknessScore`: dung de tim chu de can cai thien; bang UI chi hien tu 35 diem tro len.
+- `weaknessScore`: dung de tim chu de can cai thien; bang UI, learning path tu dong va bai goi y chi lay topic tu 35 diem tro len.
 
 Ly do tach `strengthScore`: mot topic kho nhu `trees` co the chi co vai bai AC, nhung neu user da AC bai rating cao thi khong nen bi xep thap hon cac topic co nhieu bai de. Cong thuc moi uu tien peak rating da AC, nang luc theo rating, benchmark XGBoost va do on dinh, nhung van giu `evidence` de tranh danh gia qua cao khi du lieu qua mong.
 

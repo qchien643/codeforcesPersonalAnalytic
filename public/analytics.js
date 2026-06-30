@@ -6,8 +6,9 @@ const TOPIC_STRENGTH_WEIGHTS = {
   ability: 0.24,
   hardProof: 0.18,
   stability: 0.12,
-  mastery: 0.10,
-  evidence: 0.08
+  mastery: 0.08,
+  evidence: 0.06,
+  depth: 0.04
 };
 const BUCKETS = [
   [800, 999],
@@ -177,7 +178,7 @@ function bucketFloor(bucket) {
 function normalizeTopics(tags = []) {
   const topics = new Set();
   for (const tag of tags) {
-    if (!tag || tag === "*special") continue;
+    if (!tag || String(tag).startsWith("*")) continue;
     topics.add(TOPIC_MAP.get(tag) || tag);
   }
   return [...topics];
@@ -644,10 +645,13 @@ function topicStrengthScore(topic) {
   const evidence = percentFeature(topic.evidenceScore, 0.4);
   const difficulty = percentFeature(topic.difficultyScore, 0.4);
   const mastery = percentFeature(topic.masteryScore, 0.45);
-  const peakSolved = topic.maxSolvedRating ? clamp((topic.maxSolvedRating - 1400) / 700, 0, 1) : 0;
-  const hardProof = Math.max(difficulty, peakSolved);
-  const reliability = 0.85 + 0.15 * clamp(0.55 + 0.45 * evidence, 0, 1);
-  const hardBonus = 6 * peakSolved * clamp((evidence + stability) / 2, 0.45, 1);
+  const peakSolved = topic.maxSolvedRating ? clamp((topic.maxSolvedRating - 1500) / 1700, 0, 1) : 0;
+  const averageSolved = topic.avgSolvedRating ? clamp((topic.avgSolvedRating - 1200) / 1000, 0, 1) : 0;
+  const hardDepth = clamp(Math.log1p(topic.hardSolvedCount || 0) / Math.log(80), 0, 1);
+  const solvedDepth = clamp(Math.log1p(topic.solvedCount || 0) / Math.log(120), 0, 1);
+  const practiceDepth = clamp(0.7 * hardDepth + 0.3 * solvedDepth, 0, 1);
+  const hardProof = clamp(0.65 * Math.max(difficulty, peakSolved) + 0.35 * averageSolved, 0, 1);
+  const reliability = 0.90 + 0.10 * clamp(0.55 + 0.45 * evidence, 0, 1);
   const raw = 100 * (
     TOPIC_STRENGTH_WEIGHTS.modelAbility * modelAbility
     + TOPIC_STRENGTH_WEIGHTS.ability * ability
@@ -655,9 +659,10 @@ function topicStrengthScore(topic) {
     + TOPIC_STRENGTH_WEIGHTS.stability * stability
     + TOPIC_STRENGTH_WEIGHTS.mastery * mastery
     + TOPIC_STRENGTH_WEIGHTS.evidence * evidence
+    + TOPIC_STRENGTH_WEIGHTS.depth * practiceDepth
   );
 
-  return Math.round(clamp(raw * reliability + hardBonus, 0, 100));
+  return Math.round(clamp(raw * reliability, 0, 100));
 }
 
 function aggregateTopics(statuses, now, topicCorpusStats, currentRating) {
@@ -1231,12 +1236,14 @@ function buildRecommendations(problemMap, statuses, topics, currentRating, manua
   const manualGoalTopics = normalizeManualGoals(manualGoals, validTopics);
   const weakTopics = topics
     .slice()
+    .filter((topic) => topic.weaknessScore >= MIN_IMPROVEMENT_WEAKNESS)
     .sort((a, b) => b.weaknessScore - a.weaknessScore)
     .slice(0, 5);
   const weakTopicWeights = new Map(weakTopics.map((topic, index) => [topic.topic, 1 - index * 0.12]));
   for (const goal of manualGoalTopics) {
     weakTopicWeights.set(goal.topic, Math.max(weakTopicWeights.get(goal.topic) || 0, 1.05));
   }
+  if (!weakTopicWeights.size) return [];
   const maxSolvedCount = Math.max(1, ...[...problemMap.values()].map((problem) => problem.solvedCount || 0));
   const targetRating = currentRating || 1000;
 
@@ -1447,9 +1454,14 @@ function normalizeManualGoals(manualGoals = [], validTopics = null) {
 }
 
 function buildLearningPath(topics, recommendations, manualGoals = []) {
+  const topicsWithRecommendations = new Set(
+    recommendations.flatMap((problem) => problem.topics || [])
+  );
   const targetTopics = topics
     .slice()
+    .filter((topic) => topic.weaknessScore >= MIN_IMPROVEMENT_WEAKNESS)
     .sort((a, b) => b.weaknessScore - a.weaknessScore)
+    .filter((topic) => topicsWithRecommendations.has(topic.topic))
     .slice(0, 4);
 
   const items = targetTopics.map((topic, index) => {
@@ -1501,10 +1513,24 @@ function buildSummary(profile, submissions, statuses, now) {
   const attemptedUnsolvedCount = uniqueAttempted - uniqueSolved;
   const recentCutoff = now.getTime() - RECENT_DAYS * MS_PER_DAY;
   const today = localDateKey(now);
+  const weekStart = new Date(now);
+  const weekDay = (weekStart.getDay() + 6) % 7;
+  weekStart.setDate(weekStart.getDate() - weekDay);
+  weekStart.setHours(0, 0, 0, 0);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const activeDays = new Set();
+  const activeDaysThisWeek = new Set();
+  const activeDaysThisMonth = new Set();
+  const solvedTodayKeys = new Set();
+  const solvedThisWeekKeys = new Set();
+  const solvedThisMonthKeys = new Set();
   let solved30d = 0;
-  let solvedToday = 0;
   let submissionsToday = 0;
+  let submissionsThisWeek = 0;
+  let submissionsThisMonth = 0;
+  let okSubmissionsToday = 0;
+  let okSubmissionsThisWeek = 0;
+  let okSubmissionsThisMonth = 0;
   let highestSolvedRating = 0;
 
   for (const status of statuses.values()) {
@@ -1514,18 +1540,39 @@ function buildSummary(profile, submissions, statuses, now) {
     if (status.solvedAt && status.solvedAt.getTime() >= recentCutoff) {
       solved30d += 1;
     }
-    if (status.solvedAt && localDateKey(status.solvedAt) === today) {
-      solvedToday += 1;
-    }
   }
 
   for (const submission of submissions) {
     const submittedAt = new Date((submission.creationTimeSeconds || 0) * 1000);
-    if (localDateKey(submittedAt) === today) {
+    const submittedDay = localDateKey(submittedAt);
+    const isToday = submittedDay === today;
+    const isThisWeek = submittedAt >= weekStart;
+    const isThisMonth = submittedAt >= monthStart;
+    const isAccepted = submission.verdict === "OK";
+    const key = problemKey(submission.problem);
+
+    if (isToday) {
       submissionsToday += 1;
     }
+    if (isThisWeek) {
+      submissionsThisWeek += 1;
+      activeDaysThisWeek.add(submittedDay);
+    }
+    if (isThisMonth) {
+      submissionsThisMonth += 1;
+      activeDaysThisMonth.add(submittedDay);
+    }
     if (submittedAt.getTime() >= recentCutoff) {
-      activeDays.add(dateKey(submittedAt));
+      activeDays.add(submittedDay);
+    }
+
+    if (isAccepted) {
+      if (isToday) okSubmissionsToday += 1;
+      if (isThisWeek) okSubmissionsThisWeek += 1;
+      if (isThisMonth) okSubmissionsThisMonth += 1;
+      if (key && isToday) solvedTodayKeys.add(key);
+      if (key && isThisWeek) solvedThisWeekKeys.add(key);
+      if (key && isThisMonth) solvedThisMonthKeys.add(key);
     }
   }
 
@@ -1545,8 +1592,17 @@ function buildSummary(profile, submissions, statuses, now) {
     attemptedUnsolvedCount,
     acRate: totalSubmissions ? round(okSubmissions / totalSubmissions, 3) : 0,
     activeDays30d: activeDays.size,
-    solvedToday,
+    activeDaysThisWeek: activeDaysThisWeek.size,
+    activeDaysThisMonth: activeDaysThisMonth.size,
+    solvedToday: solvedTodayKeys.size,
+    solvedThisWeek: solvedThisWeekKeys.size,
+    solvedThisMonth: solvedThisMonthKeys.size,
     submissionsToday,
+    submissionsThisWeek,
+    submissionsThisMonth,
+    okSubmissionsToday,
+    okSubmissionsThisWeek,
+    okSubmissionsThisMonth,
     solved30d,
     highestSolvedRating,
     dataConfidence: dataConfidence(totalSubmissions, uniqueSolved)

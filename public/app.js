@@ -77,6 +77,7 @@ const MANUAL_TOPIC_ALIASES = new Map([
 
 let manualGoalCatalog = new Map();
 let lastAnalyzedHandle = null;
+let lastDashboardData = null;
 
 const COLORS = {
   accent: "#1f7a5c",
@@ -128,7 +129,7 @@ const INFO_TEXTS = {
   dataConfidence:
     "Độ tin cậy dữ liệu cho biết hệ thống có đủ lịch sử để đánh giá chưa.\nCông thức gần đúng:\nconfidence = 0.55 * submissionConfidence + 0.45 * solvedConfidence\nTrong đó mỗi phần tăng chậm theo log khi có nhiều submit/bài AC hơn.\nHiểu đơn giản: dữ liệu càng nhiều thì kết luận càng đáng tin.",
   activity:
-    "Mỗi ô là một ngày.\nCông thức:\nvalue(day) = số submission trong ngày đó\nMàu càng đậm nghĩa là ngày đó nộp càng nhiều.\nDùng để nhìn thói quen luyện tập có đều hay không.",
+    "Phần này trả lời nhanh hôm nay, tuần này, tháng này và tổng thể tài khoản đã làm bao nhiêu bài.\nBài đã làm = số bài khác nhau có verdict OK trong khoảng thời gian đang chọn.\nLần nộp = tổng số submission trong khoảng đó.\nMặc định hiển thị Hôm nay; lịch 12 tháng chỉ là phần phụ để xem thói quen dài hạn.",
   submissionTrend:
     "Dữ liệu được gom theo tuần.\nCông thức:\nacceptedWeek = số submission OK trong tuần\notherWeek = tổng submission không OK trong tuần\nHiểu đơn giản: giúp thấy khối lượng luyện và tỉ lệ thành công gần đây.",
   ratingHistory:
@@ -166,7 +167,7 @@ const INFO_TEXTS = {
   weaknessMatrix:
     "Ma trận này cho biết bạn nên ôn chủ đề nào ở nhóm độ khó nào.\nMỗi ô chỉ hiện điểm rủi ro từ 0-100: điểm càng cao thì càng nên xem lại. Hover vào ô để xem số bài AC / số bài đã thử và lý do ngắn.\nÔ ít dữ liệu chỉ nên xem là gợi ý nhẹ, vì hệ thống chưa có đủ bài để kết luận chắc chắn.",
   learningPath:
-    "Lộ trình chọn các chủ đề nên ưu tiên từ bảng Chủ đề cần cải thiện.\nCông thức ưu tiên gần đúng:\npriority = điểm cần cải thiện\nHệ thống chọn các chủ đề có điểm cần cải thiện cao nhất, sau đó gắn mục tiêu số bài và nhóm độ khó phù hợp. Mục tiêu tự thêm sẽ được đưa vào lộ trình như một ưu tiên riêng.",
+    "Lộ trình chọn các chủ đề nên ưu tiên từ bảng Chủ đề cần cải thiện.\nCông thức ưu tiên gần đúng:\npriority = điểm cần cải thiện\nHệ thống chỉ đưa topic tự động vào lộ trình khi topic đó có điểm cần cải thiện từ 35 trở lên và có bài gợi ý phù hợp. Vì vậy lộ trình có thể ngắn hoặc rỗng nếu chưa có điểm yếu rõ ràng. Mục tiêu tự thêm vẫn được đưa vào như một ưu tiên riêng.",
   recommendations:
     "Danh sách này chọn bài từ hai nguồn: chủ đề cần cải thiện tự động và mục tiêu bạn tự thêm.\nĐiểm xếp bài xét mức khớp topic, độ khó so với trình hiện tại, bài đã từng thử hay chưa, độ phổ biến và khả năng AC ước lượng.\nHiểu đơn giản: bài được gợi ý vì nó giúp vá điểm yếu hoặc phục vụ mục tiêu bạn chọn, không phải vì nó nằm trong các chủ đề đang mạnh nhất.",
   attemptedUnsolved:
@@ -220,6 +221,14 @@ manualGoalList?.addEventListener("click", (event) => {
   saveManualGoals(loadManualGoals().filter((goal) => goal.id !== button.dataset.removeGoal));
   renderManualGoals();
   scheduleManualGoalRefresh("Đã xóa mục tiêu và cập nhật lại lộ trình.");
+});
+
+dashboard.addEventListener("click", (event) => {
+  const button = event.target.closest?.("[data-activity-range]");
+  if (!button) return;
+  const container = document.querySelector("#activity-heatmap");
+  container.dataset.activeRange = button.dataset.activityRange || "today";
+  if (lastDashboardData) renderActivitySummary(lastDashboardData);
 });
 
 input.value = localStorage.getItem("lastHandle") || "";
@@ -377,10 +386,12 @@ function renderManualGoals() {
 }
 
 function renderDashboard(data) {
+  lastDashboardData = data;
   dashboard.classList.remove("hidden");
+  document.querySelector("#activity-heatmap").dataset.activeRange = "today";
   renderProfile(data);
   renderKpis(data.summary);
-  renderHeatmap(data.charts.activity);
+  renderActivitySummary(data);
   renderSubmissionTrend(data.charts.submissionTrend);
   renderRatingHistory(data.charts.ratingHistory);
   renderContestDelta(data.charts.contestDeltas);
@@ -426,8 +437,89 @@ function renderKpis(summary) {
     .join("");
 }
 
-function renderHeatmap(activity) {
+function renderActivitySummary(data) {
+  const activity = data.charts.activity || [];
   const container = document.querySelector("#activity-heatmap");
+  const stats = buildActivityStats(activity, data.summary);
+  const activeKey = container.dataset.activeRange || "today";
+  const active = stats[activeKey] ? activeKey : "today";
+  const item = stats[active];
+
+  container.innerHTML = `
+    <div class="activity-tabs" role="tablist" aria-label="Khoảng thời gian hoạt động">
+      ${Object.values(stats)
+        .map((stat) => `
+          <button type="button" class="${stat.key === active ? "active" : ""}" data-activity-range="${stat.key}">
+            ${escapeHtml(stat.label)}
+          </button>
+        `)
+        .join("")}
+    </div>
+    <div class="activity-focus">
+      <span class="label">${escapeHtml(item.caption)}</span>
+      <strong>${formatNumber(item.accepted)}</strong>
+      <span>${escapeHtml(item.acceptedLabel)}</span>
+    </div>
+    <div class="activity-metrics">
+      <span><b>${formatNumber(item.submissions)}</b> lần nộp</span>
+      <span><b>${formatNumber(item.activeDays)}</b> ngày hoạt động</span>
+      <span><b>${item.acceptance}</b> tỉ lệ OK</span>
+    </div>
+    <details class="heatmap-toggle">
+      <summary>Xem lịch 12 tháng</summary>
+      <div class="heatmap">${heatmapMarkup(activity)}</div>
+    </details>
+  `;
+}
+
+function buildActivityStats(activity, summary) {
+  const total = {
+    accepted: summary.uniqueSolved || 0,
+    okSubmissions: summary.okSubmissions || 0,
+    submissions: summary.totalSubmissions || 0,
+    activeDays: activity.filter((item) => item.total > 0).length
+  };
+  const todayStats = {
+    accepted: summary.solvedToday || 0,
+    okSubmissions: summary.okSubmissionsToday || 0,
+    submissions: summary.submissionsToday || 0,
+    activeDays: summary.submissionsToday ? 1 : 0
+  };
+  const weekStats = {
+    accepted: summary.solvedThisWeek || 0,
+    okSubmissions: summary.okSubmissionsThisWeek || 0,
+    submissions: summary.submissionsThisWeek || 0,
+    activeDays: summary.activeDaysThisWeek || 0
+  };
+  const monthStats = {
+    accepted: summary.solvedThisMonth || 0,
+    okSubmissions: summary.okSubmissionsThisMonth || 0,
+    submissions: summary.submissionsThisMonth || 0,
+    activeDays: summary.activeDaysThisMonth || 0
+  };
+
+  return {
+    today: activityStat("today", "Hôm nay", "Hôm nay", todayStats, "bài AC hôm nay"),
+    week: activityStat("week", "Tuần này", "Từ thứ Hai tuần này", weekStats, "bài AC tuần này"),
+    month: activityStat("month", "Tháng này", "Từ đầu tháng này", monthStats, "bài AC tháng này"),
+    all: activityStat("all", "Tổng thể", "Từ trước đến giờ", total, "bài đã AC")
+  };
+}
+
+function activityStat(key, label, caption, values, acceptedLabel) {
+  return {
+    key,
+    label,
+    caption,
+    accepted: values.accepted || 0,
+    submissions: values.submissions || 0,
+    activeDays: values.activeDays || 0,
+    acceptedLabel,
+    acceptance: values.submissions ? percent((values.okSubmissions || 0) / values.submissions) : "0%"
+  };
+}
+
+function heatmapMarkup(activity) {
   const byDate = new Map(activity.map((item) => [item.date, item.total]));
   const today = new Date();
   const start = new Date(today);
@@ -451,7 +543,7 @@ function renderHeatmap(activity) {
     }
     cells.push(`<span class="heat-cell" title="${key}: ${value} lần nộp" style="background:${heatColor(value, max)}"></span>`);
   }
-  container.innerHTML = `
+  return `
     <div class="heatmap-months">
       ${monthMarkers
         .map((marker) => `<span style="grid-column:${Math.floor(marker.index / 7) + 1}">${escapeHtml(marker.label)}</span>`)
@@ -736,11 +828,22 @@ function renderEmptyDashboard() {
     summary: {
       rating: null,
       maxRating: null,
+      totalSubmissions: 0,
+      okSubmissions: 0,
       uniqueSolved: 0,
       solvedToday: 0,
+      solvedThisWeek: 0,
+      solvedThisMonth: 0,
       submissionsToday: 0,
+      submissionsThisWeek: 0,
+      submissionsThisMonth: 0,
+      okSubmissionsToday: 0,
+      okSubmissionsThisWeek: 0,
+      okSubmissionsThisMonth: 0,
       acRate: 0,
       activeDays30d: 0,
+      activeDaysThisWeek: 0,
+      activeDaysThisMonth: 0,
       dataConfidence: 0,
       learningStage: null,
       learningStageReason: "Nhập tên Codeforces để hệ thống phân tích giai đoạn học hiện tại."

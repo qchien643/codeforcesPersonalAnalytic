@@ -273,9 +273,27 @@ Benchmark trong bảng topic nghĩa là một nhóm bài đại diện của top
 Bảng "Chủ đề nắm tốt nhất" không sort trực tiếp bằng `masteryScore`. Nó dùng `strengthScore` để ưu tiên đúng hơn các topic người học thật sự mạnh, kể cả khi số bài chưa nhiều:
 
 ```text
-hard_proof = max(difficulty_score, peak_solved_rating_score)
-reliability = 0.85 + 0.15 * evidence_adjustment
-hard_bonus = 6 * peak_solved_rating_score * clamp((evidence + stability) / 2, 0.45, 1)
+peak_solved_rating_score =
+  clamp((max_solved_rating - 1500) / 1700, 0, 1)
+
+average_solved_rating_score =
+  clamp((avg_solved_rating - 1200) / 1000, 0, 1)
+
+hard_depth =
+  clamp(log(1 + hard_solved_count) / log(80), 0, 1)
+
+solved_depth =
+  clamp(log(1 + solved_count) / log(120), 0, 1)
+
+practice_depth =
+  0.70 * hard_depth + 0.30 * solved_depth
+
+hard_proof =
+  0.65 * max(difficulty_score, peak_solved_rating_score)
+  + 0.35 * average_solved_rating_score
+
+reliability =
+  0.90 + 0.10 * evidence_adjustment
 
 strengthScore =
   clamp(
@@ -285,15 +303,15 @@ strengthScore =
       + 0.18 * hard_proof
       + 0.12 * stabilityScore
       + 0.10 * masteryScore
-      + 0.08 * evidenceScore
-    ) * reliability
-    + hard_bonus,
+      + 0.06 * evidenceScore
+      + 0.04 * practice_depth
+    ) * reliability,
     0,
     100
   )
 ```
 
-Lý do tách `strengthScore`: `masteryScore` thiên về mô tả trạng thái học tổng thể, còn `strengthScore` dùng cho ranking mặt mạnh. Nếu user AC ít bài nhưng trong đó có bài khó của topic, topic đó không nên bị xếp quá thấp chỉ vì coverage nhỏ. Ngược lại, topic làm nhiều bài dễ vẫn cần `ability/evidence/modelAbility` tốt mới đứng cao.
+Lý do tách `strengthScore`: `masteryScore` thiên về mô tả trạng thái học tổng thể, còn `strengthScore` dùng cho ranking mặt mạnh. Nếu user AC ít bài nhưng trong đó có bài khó của topic, topic đó không nên bị xếp quá thấp chỉ vì coverage nhỏ. Ngược lại, topic làm nhiều bài dễ vẫn cần `ability/evidence/modelAbility` tốt mới đứng cao. Thang `peak_solved_rating_score` dùng khoảng 1500-3200 để tránh việc nhiều topic mạnh bị bão hòa 100 cùng lúc.
 
 ### Điểm yếu
 
@@ -323,7 +341,7 @@ Mốc diễn giải:
 - `50-69`: cần ôn.
 - `70+`: rất cần ôn.
 
-Topic dưới 35 được xem là "củng cố nhẹ" và không xuất hiện trong bảng cải thiện để tránh hiểu nhầm rằng một mặt mạnh cũng là điểm yếu.
+Topic dưới 35 được xem là "củng cố nhẹ" và không xuất hiện trong bảng cải thiện để tránh hiểu nhầm rằng một mặt mạnh cũng là điểm yếu. Lộ trình học tự động và danh sách bài nên luyện tiếp cũng chỉ lấy các topic có `weaknessScore >= 35`. Ngoài ra, một topic tự động chỉ được đưa vào lộ trình khi hệ thống tìm được ít nhất một bài gợi ý phù hợp cho topic đó; nếu không có topic nào vượt ngưỡng hoặc không có bài phù hợp thì lộ trình tự động có thể rỗng. Mục tiêu tự thêm vẫn được dùng như một nguồn ưu tiên riêng.
 
 ### Xác suất AC bằng XGBoost
 
