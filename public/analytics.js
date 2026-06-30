@@ -2,13 +2,13 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const RECENT_DAYS = 30;
 const MIN_IMPROVEMENT_WEAKNESS = 35;
 const TOPIC_STRENGTH_WEIGHTS = {
-  modelAbility: 0.28,
-  ability: 0.24,
-  hardProof: 0.18,
-  stability: 0.12,
-  mastery: 0.08,
-  evidence: 0.06,
-  depth: 0.04
+  modelAbility: 0.24,
+  ability: 0.23,
+  hardProof: 0.24,
+  stability: 0.11,
+  mastery: 0.07,
+  evidence: 0.05,
+  depth: 0.06
 };
 const BUCKETS = [
   [800, 999],
@@ -636,7 +636,7 @@ function masteryCap(topic, evidence, currentRating) {
   return clamp(cap / 100, 0, 1);
 }
 
-function topicStrengthScore(topic) {
+function topicStrengthRawScore(topic) {
   const ability = percentFeature(topic.abilityScore, 0.45);
   const modelAbility = topic.modelAbilityScore !== undefined
     ? percentFeature(topic.modelAbilityScore, ability)
@@ -662,7 +662,36 @@ function topicStrengthScore(topic) {
     + TOPIC_STRENGTH_WEIGHTS.depth * practiceDepth
   );
 
-  return Math.round(clamp(raw * reliability, 0, 100));
+  return clamp(raw * reliability, 0, 100);
+}
+
+function topicStrengthScore(topic) {
+  return Math.round(topicStrengthRawScore(topic));
+}
+
+function withTopicStrength(topic) {
+  const strengthRawScore = topicStrengthRawScore(topic);
+  return {
+    ...topic,
+    strengthRawScore: round(strengthRawScore, 3),
+    strengthScore: Math.round(strengthRawScore)
+  };
+}
+
+function topicStrengthSortValue(topic) {
+  return Number.isFinite(topic.strengthRawScore)
+    ? topic.strengthRawScore
+    : (topic.strengthScore ?? topic.masteryScore ?? 0);
+}
+
+function compareTopicStrength(a, b) {
+  return topicStrengthSortValue(b) - topicStrengthSortValue(a)
+    || (b.maxSolvedRating || 0) - (a.maxSolvedRating || 0)
+    || (b.avgSolvedRating || 0) - (a.avgSolvedRating || 0)
+    || (b.hardSolvedCount || 0) - (a.hardSolvedCount || 0)
+    || (b.masteryScore || 0) - (a.masteryScore || 0)
+    || (b.solvedCount || 0) - (a.solvedCount || 0)
+    || String(a.topic).localeCompare(String(b.topic));
 }
 
 function aggregateTopics(statuses, now, topicCorpusStats, currentRating) {
@@ -827,11 +856,8 @@ function aggregateTopics(statuses, now, topicCorpusStats, currentRating) {
       };
     })
     .filter((topic) => topic.attemptedCount > 0)
-    .map((topic) => ({
-      ...topic,
-      strengthScore: topicStrengthScore(topic)
-    }))
-    .sort((a, b) => b.strengthScore - a.strengthScore || b.masteryScore - a.masteryScore);
+    .map((topic) => withTopicStrength(topic))
+    .sort(compareTopicStrength);
 }
 
 function buildTopicReason(topic, acRate, weakness, abilityScore, evidenceScore, stabilityScore, corpus) {
@@ -1407,13 +1433,10 @@ function applyModelTopicScores(topics, problemMap, inferenceContext, currentRati
         reason: `${topic.reason} AI benchmark ${benchmark.length} bài dự đoán P_AC trung bình ${Math.round(modelAbility * 100)}%.`
       };
 
-      return {
-        ...updatedTopic,
-        strengthScore: topicStrengthScore(updatedTopic)
-      };
+      return withTopicStrength(updatedTopic);
     })
-    .map((topic) => topic.strengthScore !== undefined ? topic : ({ ...topic, strengthScore: topicStrengthScore(topic) }))
-    .sort((a, b) => b.strengthScore - a.strengthScore || b.masteryScore - a.masteryScore);
+    .map((topic) => topic.strengthScore !== undefined ? topic : withTopicStrength(topic))
+    .sort(compareTopicStrength);
 }
 
 function selectTopicBenchmarkProblems(problemMap, topic, solvedKeys, currentRating) {
@@ -1704,7 +1727,7 @@ function analyzeProfile({ profile, submissions, ratingChanges, problemset, manua
       .slice(0, 10),
     strengths: topics
       .slice()
-      .sort((a, b) => (b.strengthScore ?? b.masteryScore) - (a.strengthScore ?? a.masteryScore) || b.masteryScore - a.masteryScore)
+      .sort(compareTopicStrength)
       .slice(0, 10),
     model: modelInfo(),
     attemptedUnsolved: attemptedUnsolvedList(statuses),
