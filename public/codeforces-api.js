@@ -138,7 +138,7 @@ function getProblemset() {
   };
 }
 
-async function analyzeHandleStatic(handle) {
+async function analyzeHandleStatic(handle, options = {}) {
   const trimmedHandle = String(handle || "").trim();
   if (!trimmedHandle) {
     throw new Error("Vui lòng nhập tên Codeforces.");
@@ -168,7 +168,8 @@ async function analyzeHandleStatic(handle) {
     profile: profileResult.data,
     submissions: submissionsResult.data,
     ratingChanges: ratingResult.data,
-    problemset: problemsetResult.data
+    problemset: problemsetResult.data,
+    manualGoals: options.manualGoals || []
   });
 
   analysis.dataSources = {

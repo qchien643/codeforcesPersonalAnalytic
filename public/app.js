@@ -4,10 +4,79 @@ const dashboard = document.querySelector("#dashboard");
 const statusPanel = document.querySelector("#status-panel");
 const statusText = document.querySelector("#status-text");
 const floatingTooltip = document.querySelector("#floating-tooltip");
+const manualGoalForm = document.querySelector("#manual-goal-form");
+const manualGoalInput = document.querySelector("#manual-goal-input");
+const manualGoalList = document.querySelector("#manual-goal-list");
+const manualGoalOptions = document.querySelector("#manual-goal-options");
+const manualGoalError = document.querySelector("#manual-goal-error");
+const MIN_VISIBLE_WEAKNESS = 35;
 
 function getAnalyzeHandleStatic() {
   return window.CfCodeforcesApi?.analyzeHandleStatic;
 }
+
+const CODEFORCES_TOPIC_MAP = new Map([
+  ["implementation", "implementation"],
+  ["math", "math"],
+  ["brute force", "brute force"],
+  ["greedy", "greedy"],
+  ["constructive algorithms", "constructive"],
+  ["binary search", "binary search"],
+  ["sortings", "sorting"],
+  ["two pointers", "two pointers"],
+  ["dp", "dynamic programming"],
+  ["graphs", "graphs"],
+  ["dfs and similar", "graphs"],
+  ["trees", "trees"],
+  ["data structures", "data structures"],
+  ["strings", "strings"],
+  ["string suffix structures", "strings"],
+  ["hashing", "strings"],
+  ["number theory", "number theory"],
+  ["combinatorics", "combinatorics"],
+  ["probabilities", "probability"],
+  ["geometry", "geometry"],
+  ["dsu", "dsu/mst"],
+  ["shortest paths", "shortest paths"],
+  ["flows", "flows/matching"],
+  ["graph matchings", "flows/matching"],
+  ["games", "game theory"],
+  ["bitmasks", "bitmasks"],
+  ["divide and conquer", "divide and conquer"],
+  ["ternary search", "search"],
+  ["matrices", "math"],
+  ["fft", "advanced math"],
+  ["meet-in-the-middle", "advanced techniques"],
+  ["schedules", "scheduling"]
+]);
+
+const MANUAL_TOPIC_ALIASES = new Map([
+  ["xstk", "probability"],
+  ["xac suat", "probability"],
+  ["xác suất", "probability"],
+  ["xac suat thong ke", "probability"],
+  ["xác suất thống kê", "probability"],
+  ["probabilities", "probability"],
+  ["probability", "probability"],
+  ["dp", "dynamic programming"],
+  ["dynamic programming", "dynamic programming"],
+  ["graph", "graphs"],
+  ["graphs", "graphs"],
+  ["tree", "trees"],
+  ["trees", "trees"],
+  ["ds", "data structures"],
+  ["data structure", "data structures"],
+  ["data structures", "data structures"],
+  ["number theory", "number theory"],
+  ["geometry", "geometry"],
+  ["greedy", "greedy"],
+  ["binary search", "binary search"],
+  ["strings", "strings"],
+  ["combinatorics", "combinatorics"]
+]);
+
+let manualGoalCatalog = new Map();
+let lastAnalyzedHandle = null;
 
 const COLORS = {
   accent: "#1f7a5c",
@@ -54,6 +123,8 @@ const INFO_TEXTS = {
     "Tỉ lệ AC đo hiệu quả submit.\nCông thức:\nAC rate = số submission OK / tổng số submission\nLưu ý: chỉ số này thấp không luôn xấu, vì luyện bài khó thường cần nhiều lần thử.",
   activeDays:
     "Ngày hoạt động 30 ngày = số ngày trong 30 ngày gần nhất có ít nhất một submission.\nCông thức:\nactiveDays30d = count(distinct date with submissions)\nHiểu đơn giản: đo độ đều đặn, không đo độ giỏi.",
+  solvedToday:
+    "Bài AC hôm nay = số bài khác nhau có verdict OK trong ngày hiện tại.\nCông thức:\nsolvedToday = count(unique problem solved where solvedAt is today)\nSubmit lại cùng một bài nhiều lần vẫn chỉ tính là 1 bài.",
   dataConfidence:
     "Độ tin cậy dữ liệu cho biết hệ thống có đủ lịch sử để đánh giá chưa.\nCông thức gần đúng:\nconfidence = 0.55 * submissionConfidence + 0.45 * solvedConfidence\nTrong đó mỗi phần tăng chậm theo log khi có nhiều submit/bài AC hơn.\nHiểu đơn giản: dữ liệu càng nhiều thì kết luận càng đáng tin.",
   activity:
@@ -69,15 +140,39 @@ const INFO_TEXTS = {
   buckets:
     "Bài được chia theo nhóm độ khó Codeforces: 800-999, 1000-1199, ...\nCông thức:\nsolved(bucket) = số bài AC trong nhóm\nattemptedUnsolved(bucket) = số bài đã thử nhưng chưa AC\nDùng để biết bạn đang phủ tốt ở độ khó nào.",
   topicMastery:
-    "Điểm nắm chủ đề từ 0-100.\nCông thức :\nmastery = 100 * (0.40*coverage + 0.25*accuracy + 0.20*recency + 0.15*recovery)\ncoverage: đã AC đủ nhiều chưa.\naccuracy: tỉ lệ AC đã làm mượt.\nrecency: gần đây còn luyện không.\nrecovery: từng fail rồi sửa được không.\nHiểu đơn giản: chủ đề mạnh là chủ đề bạn giải được, giải ổn, còn luyện gần đây và biết sửa lỗi.",
+    "Bảng này liệt kê các chủ đề bạn đang nắm tốt nhất.\nĐiểm hiển thị là điểm mạnh tổng hợp từ 0-100: ưu tiên năng lực theo rating, bài khó đã AC, dự đoán bài mẫu, độ ổn định và độ tin cậy dữ liệu.\nHiểu đơn giản: một topic ít bài nhưng từng AC bài khó vẫn có thể được xếp cao, còn topic nhiều bài dễ sẽ không tự động đứng đầu.",
+  topicWeakness:
+    "Bảng này chỉ hiện các chủ đề có điểm cần cải thiện từ 35 trở lên.\nĐiểm càng cao thì càng nên ưu tiên: 35-49 là theo dõi, 50-69 là cần ôn, 70+ là rất cần ôn.\nCác topic dưới 35 được xem là củng cố nhẹ nên không còn xuất hiện ở bảng này.",
+  topicSolvedAttempted:
+    "Số bài đã AC so với số bài đã từng thử trong chủ đề này.\nChỉ số này cho biết kinh nghiệm trực tiếp của bạn với tag đó.\nTuy nhiên nó chưa nói hết năng lực, vì bài khó và bài dễ không nên được tính ngang nhau.",
+  topicAbility:
+    "Năng lực theo rating đo xem bạn đã chinh phục bài khó tới đâu trong chủ đề này.\nBài càng khó và càng đúng với tag này thì điểm càng tăng mạnh.\nNếu điểm này cao nhưng Độ ổn định thấp, nghĩa là bạn có khả năng giải bài khó nhưng còn hay sai khi cài đặt hoặc xử lý case.",
+  topicAiAbility:
+    "Dự đoán theo bài mẫu cho biết khả năng bạn AC các bài tương tự trong chủ đề này.\nHệ thống chọn một nhóm bài đại diện quanh mức hiện tại của bạn, rồi ước lượng khả năng AC trung bình.\nSố bài phía sau cho biết hệ thống đã dùng bao nhiêu bài mẫu để ước lượng.",
+  topicStability:
+    "Độ ổn định đo bạn giải chủ đề này có chắc tay không.\nNếu bạn thường AC sau ít lần sai, ít TLE và ít bài bỏ dở thì điểm cao.\nNếu bạn vẫn giải được bài khó nhưng hay WA/TLE nhiều lần, điểm này sẽ thấp hơn năng lực.",
+  topicEvidence:
+    "Độ tin cậy bằng chứng cho biết hệ thống đã có đủ dữ liệu về chủ đề này chưa.\nLàm nhiều bài, đặc biệt là bài có rating rõ ràng và đa dạng độ khó, sẽ tăng điểm này.\nNếu mới làm 1-2 bài dễ thì hệ thống sẽ dè dặt, không kết luận bạn đã rất mạnh ngay.",
+  topicWeightedAc:
+    "AC có trọng số độ khó giống tỉ lệ AC, nhưng bài khó có trọng lượng lớn hơn bài dễ.\nAC bài khó giúp điểm tăng nhiều hơn. Khi bạn thử bài khó chưa AC, hệ thống cũng giảm bớt mức phạt so với cách đếm tỉ lệ AC thường.",
+  topicDifficulty:
+    "Độ khó đã chinh phục đo mức bài khó nhất và nhóm bài khó mà bạn đã AC trong chủ đề này.\nĐiểm cao nghĩa là bạn không chỉ làm nhiều bài, mà đã xử lý được bài ở mức rating cao của tag đó.",
+  topicEffectiveSolvedRating:
+    "Rating hiệu dụng đã AC là khoảng độ khó sau khi chia mức ảnh hưởng cho từng tag.\nMột bài có nhiều tag sẽ không cộng nguyên độ khó cho tất cả tag. Tag nào thể hiện ý chính của bài sẽ nhận nhiều ảnh hưởng hơn tag phụ.",
+  topicEffectiveCorpusRating:
+    "Phổ rating hiệu dụng mô tả mặt bằng độ khó của toàn bộ kho bài trong tag này.\nMedian là mốc ở giữa: khoảng một nửa bài của tag thấp hơn mốc này và một nửa cao hơn.\nNếu median cao, tag đó vốn khó hơn, nên số bài AC ít không nhất thiết là yếu.",
+  topicHardSolved:
+    "Số bài rating 1800+ đã AC trong chủ đề này.\nĐây là tín hiệu mạnh cho năng lực, vì các bài 1800+ thường cần ý tưởng chắc hơn và cài đặt cẩn thận hơn.",
   weaknessMatrix:
-    "Mỗi ô là mức rủi ro yếu của một chủ đề trong một nhóm độ khó.\nCông thức ô:\nscore = 100 * (1 - (solved + 1) / (attempted + 2))\nĐiểm càng cao nghĩa là đã thử nhiều nhưng AC ít hơn.\nDùng để thấy rõ kiểu: không chỉ 'DP yếu', mà 'DP ở 1200-1399 yếu'.",
+    "Ma trận này cho biết bạn nên ôn chủ đề nào ở nhóm độ khó nào.\nMỗi ô chỉ hiện điểm rủi ro từ 0-100: điểm càng cao thì càng nên xem lại. Hover vào ô để xem số bài AC / số bài đã thử và lý do ngắn.\nÔ ít dữ liệu chỉ nên xem là gợi ý nhẹ, vì hệ thống chưa có đủ bài để kết luận chắc chắn.",
   learningPath:
-    "Lộ trình chọn các chủ đề nên ưu tiên.\nCông thức ưu tiên gần đúng:\npriority = weaknessScore\nHiện  chọn các chủ đề có điểm yếu cao nhất, sau đó gắn mục tiêu số bài và nhóm độ khó phù hợp.\nHiểu đơn giản: hệ thống kéo những lỗ hổng rõ nhất lên trước.",
+    "Lộ trình chọn các chủ đề nên ưu tiên từ bảng Chủ đề cần cải thiện.\nCông thức ưu tiên gần đúng:\npriority = điểm cần cải thiện\nHệ thống chọn các chủ đề có điểm cần cải thiện cao nhất, sau đó gắn mục tiêu số bài và nhóm độ khó phù hợp. Mục tiêu tự thêm sẽ được đưa vào lộ trình như một ưu tiên riêng.",
   recommendations:
-    "Điểm gợi ý bài kết hợp nhiều yếu tố.\nCông thức:\nscore = 0.35*topicFit + 0.30*difficultyFit + 0.15*quality + 0.10*novelty + 0.10*diversity\nDịch đơn giản: bài được ưu tiên nếu khớp chủ đề đang yếu, vừa sức, nhiều người đã AC, không quá trùng lặp và chưa bị bạn thử quá gần đây.",
+    "Danh sách này chọn bài từ hai nguồn: chủ đề cần cải thiện tự động và mục tiêu bạn tự thêm.\nĐiểm xếp bài xét mức khớp topic, độ khó so với trình hiện tại, bài đã từng thử hay chưa, độ phổ biến và khả năng AC ước lượng.\nHiểu đơn giản: bài được gợi ý vì nó giúp vá điểm yếu hoặc phục vụ mục tiêu bạn chọn, không phải vì nó nằm trong các chủ đề đang mạnh nhất.",
   attemptedUnsolved:
-    "Danh sách các bài đã có submission nhưng chưa có verdict OK.\nCông thức:\nattemptedUnsolved = attempted && not solved\nĐây là backlog tốt để upsolve vì bạn đã từng chạm vào bài đó."
+    "Danh sách các bài đã có submission nhưng chưa có verdict OK.\nCông thức:\nattemptedUnsolved = attempted && not solved\nĐây là backlog tốt để upsolve vì bạn đã từng chạm vào bài đó.",
+  manualGoals:
+    "Mục tiêu tự thêm là chủ đề bạn muốn ép hệ thống đưa vào lộ trình, dù dữ liệu hiện tại chưa xem đó là điểm yếu lớn nhất.\nBạn chỉ có thể chọn tag/chủ đề có trong kho bài Codeforces. Khi thêm mục tiêu hợp lệ, hệ thống sẽ ưu tiên chủ đề đó trong lộ trình học và danh sách bài nên luyện tiếp.\nNếu đã phân tích một handle, việc thêm/xóa mục tiêu sẽ tự cập nhật lại dashboard."
 };
 
 form.addEventListener("submit", async (event) => {
@@ -91,7 +186,46 @@ form.addEventListener("submit", async (event) => {
   await analyze(handle);
 });
 
+manualGoalForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const value = manualGoalInput.value.trim();
+  if (!value) return;
+
+  const goals = loadManualGoals();
+  const resolved = resolveManualGoal(value);
+  if (!resolved) {
+    showManualGoalError(`Không tìm thấy tag hoặc chủ đề "${value}". Hãy chọn một mục trong danh sách gợi ý.`);
+    return;
+  }
+
+  if (!goals.some((goal) => goal.topic === resolved.topic)) {
+    goals.push({
+      id: String(Date.now()),
+      label: resolved.label,
+      topic: resolved.topic,
+      input: value
+    });
+    saveManualGoals(goals.slice(-8));
+    scheduleManualGoalRefresh(`Đã thêm "${resolved.label}" vào mục tiêu luyện.`);
+  } else {
+    showManualGoalError(`"${resolved.label}" đã có trong danh sách mục tiêu.`);
+  }
+  manualGoalInput.value = "";
+  renderManualGoals();
+});
+
+manualGoalList?.addEventListener("click", (event) => {
+  const button = event.target.closest?.("[data-remove-goal]");
+  if (!button) return;
+  saveManualGoals(loadManualGoals().filter((goal) => goal.id !== button.dataset.removeGoal));
+  renderManualGoals();
+  scheduleManualGoalRefresh("Đã xóa mục tiêu và cập nhật lại lộ trình.");
+});
+
 input.value = localStorage.getItem("lastHandle") || "";
+setupManualGoalCatalog();
+saveManualGoals(loadManualGoals());
+renderManualGoals();
 hydrateInfoButtons();
 setupFloatingTooltip();
 renderEmptyDashboard();
@@ -107,8 +241,9 @@ async function analyze(handle) {
     if (typeof analyzeHandleStatic !== "function") {
       throw new Error("API phân tích chưa sẵn sàng.");
     }
-    const payload = await analyzeHandleStatic(handle);
+    const payload = await analyzeHandleStatic(handle, { manualGoals: loadManualGoals() });
     localStorage.setItem("lastHandle", handle);
+    lastAnalyzedHandle = payload.profile.handle || handle;
     renderDashboard(payload);
     setStatus("success", `Đã phân tích ${payload.profile.handle}. Cập nhật lúc ${formatDateTime(payload.generatedAt)}. ${dataSourceStatus(payload.dataSources)}`);
   } catch (error) {
@@ -123,6 +258,124 @@ function setStatus(type, message) {
   statusText.textContent = message;
 }
 
+function loadManualGoals() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("manualGoals") || "[]");
+    if (!Array.isArray(parsed)) return [];
+    if (!manualGoalCatalog.size) return parsed;
+    const cleaned = [];
+    const seen = new Set();
+    for (const goal of parsed) {
+      const resolved = resolveManualGoal(goal.topic || goal.label || goal.input);
+      if (!resolved || seen.has(resolved.topic)) continue;
+      seen.add(resolved.topic);
+      cleaned.push({
+        id: goal.id || `${resolved.topic}-${cleaned.length}`,
+        label: goal.label || resolved.label,
+        topic: resolved.topic,
+        input: goal.input || goal.label || resolved.label
+      });
+    }
+    return cleaned;
+  } catch {
+    return [];
+  }
+}
+
+function saveManualGoals(goals) {
+  localStorage.setItem("manualGoals", JSON.stringify(goals));
+}
+
+function setupManualGoalCatalog() {
+  manualGoalCatalog = buildManualGoalCatalog();
+  if (!manualGoalOptions) return;
+
+  const options = [...manualGoalCatalog.values()]
+    .filter((item, index, all) => all.findIndex((other) => other.label === item.label) === index)
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .slice(0, 160)
+    .map((item) => `<option value="${escapeHtml(item.label)}">${escapeHtml(item.topic === item.label ? "Codeforces tag" : `Quy về: ${item.topic}`)}</option>`)
+    .join("");
+  manualGoalOptions.innerHTML = options;
+}
+
+function buildManualGoalCatalog() {
+  const catalog = new Map();
+  const add = (label, topic, source = "topic") => {
+    const cleanLabel = String(label || "").trim();
+    const cleanTopic = String(topic || "").trim();
+    if (!cleanLabel || !cleanTopic) return;
+    catalog.set(normalizeGoalKey(cleanLabel), {
+      label: cleanLabel,
+      topic: cleanTopic,
+      source
+    });
+  };
+
+  for (const [alias, topic] of MANUAL_TOPIC_ALIASES) {
+    add(alias, topic, "alias");
+    add(topic, topic, "topic");
+  }
+
+  for (const problem of window.CF_LEARNING_PROBLEMSET?.problems || []) {
+    for (const tag of problem.tags || []) {
+      if (!tag || tag === "*special") continue;
+      const topic = normalizeCodeforcesTopic(tag);
+      add(tag, topic, "codeforces-tag");
+      add(topic, topic, "topic");
+    }
+  }
+
+  return catalog;
+}
+
+function resolveManualGoal(value) {
+  const key = normalizeGoalKey(value);
+  if (!key) return null;
+  return manualGoalCatalog.get(key) || null;
+}
+
+function normalizeGoalKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeCodeforcesTopic(tag) {
+  return CODEFORCES_TOPIC_MAP.get(String(tag || "").trim().toLowerCase()) || String(tag || "").trim().toLowerCase();
+}
+
+function showManualGoalError(message = "") {
+  if (!manualGoalError) return;
+  manualGoalError.textContent = message;
+  manualGoalError.classList.toggle("visible", Boolean(message));
+}
+
+function scheduleManualGoalRefresh(message) {
+  showManualGoalError("");
+  const handle = lastAnalyzedHandle || input.value.trim();
+  if (!handle) {
+    setStatus("success", `${message} Nhập tên Codeforces rồi bấm Phân tích để áp dụng.`);
+    return;
+  }
+  setStatus("loading", `${message} Đang cập nhật lại lộ trình và bài gợi ý...`);
+  analyze(handle);
+}
+
+function renderManualGoals() {
+  if (!manualGoalList) return;
+  const goals = loadManualGoals();
+  manualGoalList.innerHTML = goals.length
+    ? goals
+      .map((goal) => `
+        <span class="goal-chip">
+          ${escapeHtml(goal.label)}
+          <small>${escapeHtml(goal.topic)}</small>
+          <button type="button" aria-label="Xóa mục tiêu" data-remove-goal="${escapeHtml(goal.id)}">×</button>
+        </span>
+      `)
+      .join("")
+    : `<span class="empty">Chưa có mục tiêu tự thêm.</span>`;
+}
+
 function renderDashboard(data) {
   dashboard.classList.remove("hidden");
   renderProfile(data);
@@ -133,7 +386,8 @@ function renderDashboard(data) {
   renderContestDelta(data.charts.contestDeltas);
   renderVerdicts(data.charts.verdicts);
   renderBuckets(data.buckets);
-  renderTopics(data.topics);
+  renderTopics(data.strengths?.length ? data.strengths : data.topics);
+  renderWeakTopics(data.weaknesses?.length ? data.weaknesses : weakestTopics(data.topics));
   renderWeaknessMatrix(data.charts.weaknessMatrix);
   renderLearningPath(data.learningPath);
   renderRecommendations(data.recommendations);
@@ -156,6 +410,7 @@ function renderKpis(summary) {
     ["Điểm hiện tại", summary.rating ?? "chưa có", "currentRating"],
     ["Điểm cao nhất", summary.maxRating ?? "chưa có", "maxRating"],
     ["Bài đã AC", formatNumber(summary.uniqueSolved), "solved"],
+    ["Bài AC hôm nay", formatNumber(summary.solvedToday), "solvedToday"],
     ["Tỉ lệ AC", percent(summary.acRate), "acRate"],
     ["Ngày hoạt động 30 ngày", summary.activeDays30d, "activeDays"],
     ["Độ tin cậy dữ liệu", percent(summary.dataConfidence), "dataConfidence"]
@@ -250,19 +505,101 @@ function renderBuckets(items) {
   ]);
 }
 
-function renderTopics(topics) {
-  const top = topics.slice(0, 12);
+function renderTopics(topics = []) {
+  const top = topics.slice(0, 10);
   document.querySelector("#topic-mastery").innerHTML = top.length
     ? top
-      .map((topic) => `
-          <div class="topic-row" title="${escapeHtml(topic.reason)}">
-            <strong>${escapeHtml(topic.topic)}</strong>
-            <span class="bar-track"><span class="bar-fill" style="width:${topic.masteryScore}%"></span></span>
-            <span class="score">${topic.masteryScore}</span>
-          </div>
-        `)
+      .map((topic) => {
+        const score = topic.strengthScore ?? topic.masteryScore;
+        return `
+          <details class="topic-card">
+            <summary class="topic-row">
+              <strong>${escapeHtml(topic.topic)}</strong>
+              <span class="bar-track"><span class="bar-fill" style="width:${score}%"></span></span>
+              <span class="score">${score}</span>
+            </summary>
+            <div class="topic-detail-grid">
+              ${topicMetric("Điểm mạnh tổng hợp", `${score}/100`, "topicMastery")}
+              ${topicMetric("Điểm nắm chủ đề", `${topic.masteryScore}/100`, "topicMastery")}
+              ${topicMetric("Đã AC / đã thử", `${topic.solvedCount}/${topic.attemptedCount}`, "topicSolvedAttempted")}
+              ${topicMetric("Năng lực theo rating", `${topic.abilityScore}/100`, "topicAbility")}
+              ${topic.modelAbilityScore !== undefined ? topicMetric("Dự đoán bài mẫu", `${topic.modelAbilityScore}/100 · ${topic.modelSampleSize} bài`, "topicAiAbility") : ""}
+              ${topicMetric("Độ ổn định", `${topic.stabilityScore}/100`, "topicStability")}
+              ${topicMetric("Độ tin cậy bằng chứng", `${topic.evidenceScore}/100`, "topicEvidence")}
+              ${topicMetric("AC có trọng số độ khó", percent(topic.difficultyAdjustedAccuracy), "topicWeightedAc")}
+              ${topicMetric("Độ khó đã chinh phục", `${topic.difficultyScore}/100`, "topicDifficulty")}
+              ${topicMetric("Rating hiệu dụng đã AC", formatRatingRange(topic.minSolvedRating, topic.maxSolvedRating, topic.avgSolvedRating), "topicEffectiveSolvedRating")}
+              ${topicMetric("Phổ rating hiệu dụng", formatRatingRange(topic.topicMinRating, topic.topicMaxRating, topic.topicMedianRating, "median"), "topicEffectiveCorpusRating")}
+              ${topicMetric("Bài 1800+ đã AC", topic.hardSolvedCount || 0, "topicHardSolved")}
+            </div>
+            <p class="muted">${escapeHtml(topic.reason)}</p>
+          </details>
+        `;
+      })
       .join("")
     : `<p class="empty">Chưa có đủ dữ liệu topic.</p>`;
+}
+
+function renderWeakTopics(topics = []) {
+  const top = topics.filter((topic) => topic.weaknessScore >= MIN_VISIBLE_WEAKNESS).slice(0, 10);
+  document.querySelector("#topic-weakness-list").innerHTML = top.length
+    ? `
+      ${top
+      .map((topic) => `
+          <details class="topic-card weakness-card">
+            <summary class="topic-row">
+              <strong>${escapeHtml(topic.topic)}</strong>
+              <span class="bar-track"><span class="bar-fill weakness-fill" style="width:${topic.weaknessScore}%; background:${weaknessBarColor(topic.weaknessScore)}"></span></span>
+              <span class="score weakness-score" style="color:${weaknessBarColor(topic.weaknessScore)}">${topic.weaknessScore}</span>
+            </summary>
+            <div class="topic-detail-grid">
+              ${topicMetric("Mức ưu tiên", weaknessLevelLabel(topic.weaknessScore), "topicWeakness")}
+              ${topicMetric("Điểm cần cải thiện", `${topic.weaknessScore}/100`, "topicWeakness")}
+              ${topicMetric("Điểm nắm chủ đề", `${topic.masteryScore}/100`, "topicMastery")}
+              ${topicMetric("Đã AC / đã thử", `${topic.solvedCount}/${topic.attemptedCount}`, "topicSolvedAttempted")}
+              ${topicMetric("Bài đã thử chưa AC", topic.attemptedUnsolvedCount || 0, "attemptedUnsolved")}
+              ${topicMetric("Năng lực theo rating", `${topic.abilityScore}/100`, "topicAbility")}
+              ${topicMetric("Độ ổn định", `${topic.stabilityScore}/100`, "topicStability")}
+              ${topicMetric("Độ tin cậy bằng chứng", `${topic.evidenceScore}/100`, "topicEvidence")}
+              ${topicMetric("Lần AC gần nhất", formatDaysSince(topic.daysSinceLastSolved), "activity")}
+            </div>
+            <p class="muted">${escapeHtml(topic.reason)}</p>
+          </details>
+        `)
+      .join("")}
+      <p class="list-note">Bảng này đã ẩn các chủ đề dưới 35 điểm vì đó chỉ là mức củng cố nhẹ.</p>
+    `
+    : `<p class="empty">Không có chủ đề nào vượt ngưỡng cần cải thiện 35 điểm.</p>`;
+}
+
+function weakestTopics(topics = []) {
+  return topics
+    .filter((topic) => topic.weaknessScore >= MIN_VISIBLE_WEAKNESS)
+    .sort((a, b) => b.weaknessScore - a.weaknessScore)
+    .slice(0, 10);
+}
+
+function weaknessLevelLabel(score) {
+  if (score >= 70) return "rất cần ôn";
+  if (score >= 50) return "cần ôn";
+  if (score >= 35) return "theo dõi";
+  return "củng cố nhẹ";
+}
+
+function weaknessBarColor(score) {
+  if (score >= 70) return COLORS.accent2;
+  if (score >= 50) return "#d07a42";
+  if (score >= 35) return COLORS.warn;
+  return COLORS.accent;
+}
+
+function topicMetric(label, value, infoKey) {
+  return `
+    <span class="topic-metric">
+      <b>${escapeHtml(label)} ${infoButton(infoKey)}</b>
+      ${escapeHtml(String(value))}
+    </span>
+  `;
 }
 
 function renderWeaknessMatrix(matrix) {
@@ -273,8 +610,13 @@ function renderWeaknessMatrix(matrix) {
         <td>${escapeHtml(topic)}</td>
         ${matrix.buckets
         .map((bucket) => {
-          const cell = cellMap.get(`${topic}:${bucket}`) || { score: 0, solved: 0, attempted: 0 };
-          return `<td title="${cell.solved}/${cell.attempted} bài đã AC" style="background:${weaknessColor(cell.score)}">${cell.attempted ? cell.score : "-"}</td>`;
+          const cell = cellMap.get(`${topic}:${bucket}`) || { score: null, solved: 0, attempted: 0, label: "Chưa có dữ liệu", detail: "Bạn chưa thử bài nào ở ô này." };
+          const tooltip = `${cell.label}. ${cell.detail || ""}`;
+          return `
+            <td class="matrix-cell ${cell.confidence === "thấp" ? "low-confidence" : ""}" data-tooltip="${escapeHtml(tooltip)}" style="background:${weaknessColor(cell.score)}">
+              ${cell.attempted ? cell.score : "-"}
+            </td>
+          `;
         })
         .join("")}
       </tr>
@@ -289,6 +631,14 @@ function renderWeaknessMatrix(matrix) {
         </thead>
         <tbody>${rows}</tbody>
       </table>
+      <div class="matrix-legend">
+        <span><b>0-29</b> ổn</span>
+        <span><b>30-49</b> theo dõi</span>
+        <span><b>50-69</b> cần ôn</span>
+        <span><b>70+</b> rất cần ôn</span>
+        <span><b>-</b> chưa thử</span>
+        <span>Ô mờ: ít dữ liệu, hover để xem AC/thử.</span>
+      </div>
     `
     : `<p class="empty">Chưa có đủ dữ liệu ma trận.</p>`;
 }
@@ -297,15 +647,26 @@ function renderLearningPath(items) {
   document.querySelector("#learning-path").innerHTML = items.length
     ? items
       .map((item) => `
-          <article class="path-item">
-            <h4>${item.order}. ${escapeHtml(item.topic)}</h4>
+          <details class="path-item">
+            <summary><h4>${item.order}. ${escapeHtml(item.topic)}</h4></summary>
             <p class="muted">${escapeHtml(item.reason)}</p>
             <div class="path-meta">
               <span class="pill">Ưu tiên ${item.priorityScore}</span>
               <span class="pill">Mục tiêu ${escapeHtml(item.targetBucket)}</span>
               <span class="pill">${item.targetProblemCount} bài</span>
+              <span class="pill">${item.source === "manual" ? "tự thêm" : "tự động"}</span>
             </div>
-          </article>
+            ${item.recommendations?.length ? `
+              <div class="mini-problem-list">
+                ${item.recommendations.map((problem) => `
+                  <a href="${problem.url}" target="_blank" rel="noreferrer">
+                    ${escapeHtml(problem.key)} · ${escapeHtml(problem.name)}
+                    <span>Độ khó ${problem.rating} · Khả năng AC ${percent(problem.acProbability)}</span>
+                  </a>
+                `).join("")}
+              </div>
+            ` : ""}
+          </details>
         `)
       .join("")
     : `<p class="empty">Chưa có lộ trình học.</p>`;
@@ -320,9 +681,11 @@ function renderRecommendations(items) {
             <h4><a href="${problem.url}" target="_blank" rel="noreferrer">${escapeHtml(problem.key)} · ${escapeHtml(problem.name)}</a></h4>
             <p class="muted">${escapeHtml(problem.reason)}</p>
             <div class="problem-meta">
-              <span class="pill ${problem.difficultyLevel === "stretch" ? "warn" : ""}">${escapeHtml(problem.difficultyLabel)}</span>
-              <span class="pill">${problem.rating}</span>
-              <span class="pill">${formatNumber(problem.solvedCount)} lượt AC</span>
+              <span class="pill ${problem.difficultyLevel === "stretch" ? "warn" : ""}">Mức: ${escapeHtml(problem.difficultyLabel)}</span>
+              <span class="pill">Nguồn: ${problem.source === "manual" ? "tự thêm" : "tự động"}</span>
+              <span class="pill">Khả năng AC ${percent(problem.acProbability)}</span>
+              <span class="pill">Độ khó ${problem.rating}</span>
+              <span class="pill">Độ phổ biến ${formatNumber(problem.solvedCount)} AC</span>
             </div>
           </article>
         `)
@@ -374,6 +737,8 @@ function renderEmptyDashboard() {
       rating: null,
       maxRating: null,
       uniqueSolved: 0,
+      solvedToday: 0,
+      submissionsToday: 0,
       acRate: 0,
       activeDays30d: 0,
       dataConfidence: 0,
@@ -390,6 +755,8 @@ function renderEmptyDashboard() {
     },
     buckets: [],
     topics: [],
+    weaknesses: [],
+    strengths: [],
     learningPath: [],
     recommendations: [],
     attemptedUnsolved: []
@@ -408,26 +775,26 @@ function hydrateInfoButtons() {
 
 function setupFloatingTooltip() {
   document.addEventListener("pointerover", (event) => {
-    const button = event.target.closest?.(".info-button[data-tooltip]");
-    if (!button) return;
-    showTooltip(button);
+    const trigger = event.target.closest?.("[data-tooltip]");
+    if (!trigger || trigger.id === "floating-tooltip") return;
+    showTooltip(trigger);
   });
 
   document.addEventListener("pointerout", (event) => {
-    const button = event.target.closest?.(".info-button[data-tooltip]");
-    if (!button) return;
+    const trigger = event.target.closest?.("[data-tooltip]");
+    if (!trigger || trigger.id === "floating-tooltip") return;
     hideTooltip();
   });
 
   document.addEventListener("focusin", (event) => {
-    const button = event.target.closest?.(".info-button[data-tooltip]");
-    if (!button) return;
-    showTooltip(button);
+    const trigger = event.target.closest?.("[data-tooltip]");
+    if (!trigger || trigger.id === "floating-tooltip") return;
+    showTooltip(trigger);
   });
 
   document.addEventListener("focusout", (event) => {
-    const button = event.target.closest?.(".info-button[data-tooltip]");
-    if (!button) return;
+    const trigger = event.target.closest?.("[data-tooltip]");
+    if (!trigger || trigger.id === "floating-tooltip") return;
     hideTooltip();
   });
 
@@ -748,6 +1115,20 @@ function clampNumber(value, min, max) {
 
 function formatNumber(value) {
   return new Intl.NumberFormat("vi-VN").format(value || 0);
+}
+
+function formatRatingRange(min, max, center = null, centerLabel = "TB") {
+  if (!min && !max && !center) return "-";
+  const range = min && max ? `${min}-${max}` : String(min || max || "-");
+  return center ? `${range} · ${centerLabel} ${center}` : range;
+}
+
+function formatDaysSince(days) {
+  if (!Number.isFinite(days)) return "chưa có";
+  if (days <= 0) return "hôm nay";
+  if (days === 1) return "1 ngày trước";
+  if (days >= 365) return "chưa AC gần đây";
+  return `${days} ngày trước`;
 }
 
 function formatDate(input) {

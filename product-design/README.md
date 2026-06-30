@@ -9,7 +9,7 @@ San pham khong phai online judge, khong thay the Codeforces va khong tap trung v
 - Input chinh: Codeforces username/handle.
 - Data source chinh: Codeforces API cong khai.
 - Doi tuong phan tich: mot profile Codeforces tai mot thoi diem.
-- Output chinh: thong ke, tien do hoc hien tai, topic mastery, weak areas, learning path va problem recommendations.
+- Output chinh: thong ke, tien do hoc hien tai, chu de nam tot nhat, chu de can cai thien, learning path va problem recommendations.
 - Vong lap san pham: sync data -> analyze -> diagnose -> recommend -> user luyen tren Codeforces -> sync lai.
 
 ## Tai lieu trong thu muc
@@ -45,7 +45,15 @@ Nen uu tien cac model de giai thich trong MVP:
 - IRT/Rasch-style: uoc luong kha nang so voi do kho bai.
 - PFA/BKT-style: uoc luong mastery theo topic dua tren chuoi correct/incorrect.
 - Half-life/staleness: topic lau khong luyen thi diem tu tin giam dan.
-- Ranking/recommender: chon bai bang weak topic + difficulty fit + quality + diversity.
+- Ranking/recommender: chon bai bang weak topic + difficulty fit + quality + probability fit + manual goals.
+
+## Cap nhat quan trong ve topic scoring
+
+- `masteryScore`: giai thich muc nam chu de hien tai.
+- `strengthScore`: dung de sap xep bang chu de nam tot nhat.
+- `weaknessScore`: dung de tim chu de can cai thien; bang UI chi hien tu 35 diem tro len.
+
+Ly do tach `strengthScore`: mot topic kho nhu `trees` co the chi co vai bai AC, nhung neu user da AC bai rating cao thi khong nen bi xep thap hon cac topic co nhieu bai de. Cong thuc moi uu tien peak rating da AC, nang luc theo rating, benchmark XGBoost va do on dinh, nhung van giu `evidence` de tranh danh gia qua cao khi du lieu qua mong.
 
 ## Stack hien tai
 

@@ -122,10 +122,10 @@
           <article class="panel">
             <div class="panel-head">
               <div class="title-with-info">
-                <h3>Mức độ nắm chủ đề</h3>
+                <h3>Chủ đề nắm tốt nhất</h3>
                 <button type="button" class="info-button" data-info-key="topicMastery">!</button>
               </div>
-              <span class="muted">Các chủ đề có điểm cao</span>
+              <span class="muted">Xếp theo điểm mạnh tổng hợp</span>
             </div>
             <div id="topic-mastery" class="topic-list"></div>
           </article>
@@ -133,13 +133,24 @@
           <article class="panel">
             <div class="panel-head">
               <div class="title-with-info">
-                <h3>Ma trận điểm yếu</h3>
-                <button type="button" class="info-button" data-info-key="weaknessMatrix">!</button>
+                <h3>Chủ đề cần cải thiện</h3>
+                <button type="button" class="info-button" data-info-key="topicWeakness">!</button>
               </div>
-              <span class="muted">Chủ đề x nhóm độ khó</span>
+              <span class="muted">Chỉ hiện chủ đề có điểm từ 35</span>
             </div>
-            <div id="weakness-matrix" class="matrix-wrap"></div>
+            <div id="topic-weakness-list" class="topic-list"></div>
           </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="title-with-info">
+              <h3>Ma trận điểm yếu</h3>
+              <button type="button" class="info-button" data-info-key="weaknessMatrix">!</button>
+            </div>
+            <span class="muted">Chủ đề x nhóm độ khó</span>
+          </div>
+          <div id="weakness-matrix" class="matrix-wrap"></div>
         </section>
 
         <section class="grid two">
@@ -154,16 +165,35 @@
             <div id="learning-path" class="path-list"></div>
           </article>
 
-          <article class="panel">
-            <div class="panel-head">
-              <div class="title-with-info">
-                <h3>Bài nên luyện tiếp</h3>
-                <button type="button" class="info-button" data-info-key="recommendations">!</button>
+          <div class="panel-stack">
+            <section class="manual-goals panel">
+              <div class="panel-head">
+                <div class="title-with-info">
+                  <h3>Mục tiêu tự thêm</h3>
+                  <button type="button" class="info-button" data-info-key="manualGoals">!</button>
+                </div>
+                <span class="muted">Ưu tiên topic trong lộ trình và bài gợi ý</span>
               </div>
-              <span class="muted">Khởi động, trọng tâm, thử thách</span>
-            </div>
-            <div id="recommendations" class="problem-list"></div>
-          </article>
+              <form id="manual-goal-form" class="manual-goal-form" onsubmit="return false;">
+                <input id="manual-goal-input" type="text" autocomplete="off" list="manual-goal-options" placeholder="Tìm tag: dp, trees, probabilities..." />
+                <datalist id="manual-goal-options"></datalist>
+                <button type="submit">Thêm</button>
+              </form>
+              <p id="manual-goal-error" class="manual-goal-error" aria-live="polite"></p>
+              <div id="manual-goal-list" class="manual-goal-list"></div>
+            </section>
+
+            <article class="panel">
+              <div class="panel-head">
+                <div class="title-with-info">
+                  <h3>Bài nên luyện tiếp</h3>
+                  <button type="button" class="info-button" data-info-key="recommendations">!</button>
+                </div>
+                <span class="muted">Từ lộ trình tự động và mục tiêu tự thêm</span>
+              </div>
+              <div id="recommendations" class="problem-list"></div>
+            </article>
+          </div>
         </section>
 
         <section class="panel">
@@ -181,6 +211,7 @@
 
     <div id="floating-tooltip" class="floating-tooltip" role="tooltip"></div>
     <script src="./data.js"></script>
+    <script src="./cf_xgb_model.js"></script>
     <script src="./analytics.js"></script>
     <script src="./codeforces-api.js"></script>
     <script src="./app.js"></script>
