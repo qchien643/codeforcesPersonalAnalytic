@@ -56,6 +56,187 @@ const TOPIC_MAP = new Map([
   ["schedules", "scheduling"]
 ]);
 
+const TOPIC_AFFINITY_MAP = new Map([
+  ["trees", [
+    ["graphs", 0.35],
+    ["dsu/mst", 0.30],
+    ["data structures", 0.24],
+    ["dynamic programming", 0.20],
+    ["shortest paths", 0.12]
+  ]],
+  ["graphs", [
+    ["trees", 0.30],
+    ["shortest paths", 0.30],
+    ["dsu/mst", 0.28],
+    ["flows/matching", 0.24],
+    ["data structures", 0.14]
+  ]],
+  ["dsu/mst", [
+    ["graphs", 0.36],
+    ["trees", 0.32],
+    ["data structures", 0.20],
+    ["shortest paths", 0.12]
+  ]],
+  ["shortest paths", [
+    ["graphs", 0.38],
+    ["data structures", 0.22],
+    ["dsu/mst", 0.16],
+    ["flows/matching", 0.12]
+  ]],
+  ["flows/matching", [
+    ["graphs", 0.35],
+    ["shortest paths", 0.24],
+    ["dsu/mst", 0.18],
+    ["data structures", 0.12]
+  ]],
+  ["2-sat", [
+    ["graphs", 0.30],
+    ["dynamic programming", 0.10]
+  ]],
+  ["dynamic programming", [
+    ["bitmasks", 0.30],
+    ["combinatorics", 0.22],
+    ["trees", 0.18],
+    ["graphs", 0.16],
+    ["probability", 0.16],
+    ["advanced techniques", 0.12]
+  ]],
+  ["bitmasks", [
+    ["dynamic programming", 0.32],
+    ["brute force", 0.22],
+    ["combinatorics", 0.18],
+    ["advanced techniques", 0.14]
+  ]],
+  ["brute force", [
+    ["implementation", 0.24],
+    ["bitmasks", 0.18],
+    ["math", 0.10]
+  ]],
+  ["combinatorics", [
+    ["math", 0.28],
+    ["dynamic programming", 0.22],
+    ["probability", 0.20],
+    ["number theory", 0.14]
+  ]],
+  ["probability", [
+    ["combinatorics", 0.34],
+    ["math", 0.24],
+    ["dynamic programming", 0.18]
+  ]],
+  ["number theory", [
+    ["math", 0.30],
+    ["combinatorics", 0.18],
+    ["advanced math", 0.16],
+    ["chinese remainder theorem", 0.14]
+  ]],
+  ["math", [
+    ["number theory", 0.24],
+    ["combinatorics", 0.18],
+    ["geometry", 0.14],
+    ["probability", 0.12],
+    ["advanced math", 0.12]
+  ]],
+  ["advanced math", [
+    ["math", 0.30],
+    ["number theory", 0.22],
+    ["combinatorics", 0.16]
+  ]],
+  ["geometry", [
+    ["math", 0.26],
+    ["search", 0.18],
+    ["implementation", 0.10]
+  ]],
+  ["strings", [
+    ["data structures", 0.22],
+    ["expression parsing", 0.20],
+    ["dynamic programming", 0.12]
+  ]],
+  ["expression parsing", [
+    ["strings", 0.30],
+    ["implementation", 0.18],
+    ["data structures", 0.14]
+  ]],
+  ["data structures", [
+    ["trees", 0.24],
+    ["graphs", 0.20],
+    ["binary search", 0.18],
+    ["divide and conquer", 0.16],
+    ["strings", 0.12],
+    ["dsu/mst", 0.12]
+  ]],
+  ["divide and conquer", [
+    ["data structures", 0.28],
+    ["binary search", 0.24],
+    ["dynamic programming", 0.18],
+    ["advanced techniques", 0.16]
+  ]],
+  ["binary search", [
+    ["two pointers", 0.20],
+    ["data structures", 0.18],
+    ["divide and conquer", 0.18],
+    ["math", 0.12]
+  ]],
+  ["two pointers", [
+    ["binary search", 0.22],
+    ["sorting", 0.18],
+    ["greedy", 0.16],
+    ["data structures", 0.12]
+  ]],
+  ["sorting", [
+    ["greedy", 0.20],
+    ["two pointers", 0.18],
+    ["data structures", 0.12]
+  ]],
+  ["greedy", [
+    ["constructive", 0.24],
+    ["sorting", 0.18],
+    ["math", 0.12],
+    ["two pointers", 0.12]
+  ]],
+  ["constructive", [
+    ["greedy", 0.24],
+    ["math", 0.14],
+    ["implementation", 0.12]
+  ]],
+  ["implementation", [
+    ["brute force", 0.20],
+    ["constructive", 0.12],
+    ["strings", 0.10]
+  ]],
+  ["game theory", [
+    ["dynamic programming", 0.22],
+    ["math", 0.20],
+    ["greedy", 0.12]
+  ]],
+  ["advanced techniques", [
+    ["divide and conquer", 0.24],
+    ["bitmasks", 0.18],
+    ["dynamic programming", 0.16]
+  ]],
+  ["chinese remainder theorem", [
+    ["number theory", 0.36],
+    ["math", 0.20]
+  ]],
+  ["search", [
+    ["binary search", 0.28],
+    ["geometry", 0.18],
+    ["math", 0.12]
+  ]],
+  ["communication", [
+    ["interactive", 0.30],
+    ["constructive", 0.12]
+  ]],
+  ["scheduling", [
+    ["greedy", 0.22],
+    ["constructive", 0.14]
+  ]],
+  ["interactive", [
+    ["constructive", 0.16],
+    ["binary search", 0.14],
+    ["communication", 0.12]
+  ]]
+]);
+
 const TOPIC_CREDIT_WEIGHTS = new Map([
   ["implementation", 0.45],
   ["brute force", 0.55],
@@ -637,18 +818,22 @@ function masteryCap(topic, evidence, currentRating) {
 }
 
 function topicStrengthRawScore(topic) {
-  const ability = percentFeature(topic.abilityScore, 0.45);
+  const ability = percentFeature(topic.effectiveAbilityScore ?? topic.abilityScore, 0.45);
   const modelAbility = topic.modelAbilityScore !== undefined
     ? percentFeature(topic.modelAbilityScore, ability)
     : ability;
   const stability = percentFeature(topic.stabilityScore, 0.5);
-  const evidence = percentFeature(topic.evidenceScore, 0.4);
-  const difficulty = percentFeature(topic.difficultyScore, 0.4);
+  const evidence = percentFeature(topic.effectiveEvidenceScore ?? topic.evidenceScore, 0.4);
+  const difficulty = percentFeature(topic.effectiveDifficultyScore ?? topic.difficultyScore, 0.4);
   const mastery = percentFeature(topic.masteryScore, 0.45);
-  const peakSolved = topic.maxSolvedRating ? clamp((topic.maxSolvedRating - 1500) / 1700, 0, 1) : 0;
-  const averageSolved = topic.avgSolvedRating ? clamp((topic.avgSolvedRating - 1200) / 1000, 0, 1) : 0;
-  const hardDepth = clamp(Math.log1p(topic.hardSolvedCount || 0) / Math.log(80), 0, 1);
-  const solvedDepth = clamp(Math.log1p(topic.solvedCount || 0) / Math.log(120), 0, 1);
+  const maxSolvedRating = topic.effectiveMaxSolvedRating ?? topic.maxSolvedRating;
+  const avgSolvedRating = topic.effectiveAvgSolvedRating ?? topic.avgSolvedRating;
+  const hardSolvedCount = topic.effectiveHardSolvedCount ?? topic.hardSolvedCount;
+  const solvedCount = topic.effectiveSolvedCount ?? topic.solvedCount;
+  const peakSolved = maxSolvedRating ? clamp((maxSolvedRating - 1500) / 1700, 0, 1) : 0;
+  const averageSolved = avgSolvedRating ? clamp((avgSolvedRating - 1200) / 1000, 0, 1) : 0;
+  const hardDepth = clamp(Math.log1p(hardSolvedCount || 0) / Math.log(80), 0, 1);
+  const solvedDepth = clamp(Math.log1p(solvedCount || 0) / Math.log(120), 0, 1);
   const practiceDepth = clamp(0.7 * hardDepth + 0.3 * solvedDepth, 0, 1);
   const hardProof = clamp(0.65 * Math.max(difficulty, peakSolved) + 0.35 * averageSolved, 0, 1);
   const reliability = 0.90 + 0.10 * clamp(0.55 + 0.45 * evidence, 0, 1);
@@ -692,6 +877,125 @@ function compareTopicStrength(a, b) {
     || (b.masteryScore || 0) - (a.masteryScore || 0)
     || (b.solvedCount || 0) - (a.solvedCount || 0)
     || String(a.topic).localeCompare(String(b.topic));
+}
+
+function topicAffinityGate(topic) {
+  const solved = topic.solvedCount || 0;
+  const maxSolved = topic.maxSolvedRating || 0;
+  if (!solved) return 0;
+  if (solved >= 5 || maxSolved >= 1900) return 1;
+  if (solved >= 2 && maxSolved >= 1600) return 0.8;
+  if (solved >= 3) return 0.6;
+  return 0.25;
+}
+
+function relatedTopicConfidence(topic) {
+  return clamp(
+    0.58 * percentFeature(topic.evidenceScore, 0)
+    + 0.22 * percentFeature(topic.stabilityScore, 0.5)
+    + 0.20 * clamp(Math.log1p(topic.solvedCount || 0) / Math.log(24), 0, 1),
+    0,
+    1
+  );
+}
+
+function applyRelatedTopicEvidence(topics) {
+  const topicsByName = new Map(topics.map((topic) => [topic.topic, topic]));
+
+  return topics
+    .map((topic) => {
+      const edges = TOPIC_AFFINITY_MAP.get(topic.topic) || [];
+      const gate = topicAffinityGate(topic);
+      if (!edges.length || gate <= 0) return withTopicStrength(topic);
+
+      let relatedSolved = 0;
+      let relatedAttempted = 0;
+      let relatedHard = 0;
+      let relatedEvidence = 0;
+      let relatedDifficulty = 0;
+      let relatedAbility = 0;
+      let relatedWeight = 0;
+      let relatedAvgNumerator = 0;
+      let relatedAvgWeight = 0;
+      let relatedMaxRating = topic.maxSolvedRating || null;
+      const supportTopics = [];
+
+      for (const [relatedTopic, affinity] of edges) {
+        const neighbor = topicsByName.get(relatedTopic);
+        if (!neighbor || neighbor.topic === topic.topic) continue;
+
+        const confidence = relatedTopicConfidence(neighbor);
+        const weight = clamp(affinity, 0, 0.5) * confidence;
+        if (weight <= 0) continue;
+
+        relatedSolved += weight * (neighbor.solvedCount || 0);
+        relatedAttempted += weight * (neighbor.attemptedCount || 0);
+        relatedHard += weight * (neighbor.hardSolvedCount || 0);
+        relatedEvidence += weight * percentFeature(neighbor.evidenceScore, 0);
+        relatedDifficulty += weight * percentFeature(neighbor.difficultyScore, 0);
+        relatedAbility += weight * percentFeature(neighbor.abilityScore, 0);
+        relatedWeight += weight;
+
+        if (neighbor.avgSolvedRating) {
+          const avgWeight = weight * Math.max(1, neighbor.solvedCount || 1);
+          relatedAvgNumerator += neighbor.avgSolvedRating * avgWeight;
+          relatedAvgWeight += avgWeight;
+        }
+        if (neighbor.maxSolvedRating) {
+          const baseMax = topic.maxSolvedRating || 800;
+          const creditedMax = Math.round(baseMax + gate * affinity * 0.35 * Math.max(0, neighbor.maxSolvedRating - baseMax));
+          relatedMaxRating = relatedMaxRating ? Math.max(relatedMaxRating, creditedMax) : creditedMax;
+        }
+
+        supportTopics.push({
+          topic: relatedTopic,
+          weight: round(weight, 3),
+          solved: neighbor.solvedCount || 0,
+          maxSolvedRating: neighbor.maxSolvedRating || null
+        });
+      }
+
+      if (relatedWeight <= 0) return withTopicStrength(topic);
+
+      const maxBorrowedSolved = Math.min(12, Math.max(2.25, (topic.solvedCount || 0) * 0.35));
+      const maxBorrowedHard = Math.min(8, Math.max(0.85, (topic.hardSolvedCount || 0) * 0.35));
+      const borrowedSolved = round(Math.min(gate * relatedSolved, maxBorrowedSolved), 2);
+      const borrowedAttempted = round(Math.min(gate * relatedAttempted, Math.min(14, Math.max(2.5, (topic.attemptedCount || 0) * 0.35))), 2);
+      const borrowedHard = round(Math.min(gate * relatedHard, maxBorrowedHard), 2);
+      const relatedEvidenceAverage = relatedEvidence / relatedWeight;
+      const relatedDifficultyAverage = relatedDifficulty / relatedWeight;
+      const relatedAbilityAverage = relatedAbility / relatedWeight;
+      const relatedAvgRating = relatedAvgWeight ? Math.round(relatedAvgNumerator / relatedAvgWeight) : null;
+      const evidenceBonus = Math.round(16 * gate * clamp(borrowedSolved / Math.max(3, (topic.solvedCount || 0) + 2), 0, 1));
+      const hardBonus = clamp(borrowedHard / Math.max(1, (topic.hardSolvedCount || 0) + 1.5), 0, 1);
+      const abilityBlend = clamp(0.18 * gate * (relatedAbilityAverage - percentFeature(topic.abilityScore, 0)), 0, 0.07);
+      const difficultyBlend = clamp(0.18 * gate * (relatedDifficultyAverage - percentFeature(topic.difficultyScore, 0)), 0, 0.07);
+      const effectiveAvgSolvedRating = relatedAvgRating && topic.avgSolvedRating
+        ? Math.max(topic.avgSolvedRating, Math.round((topic.avgSolvedRating * Math.max(1, topic.solvedCount || 1) + relatedAvgRating * borrowedSolved * 0.4) / Math.max(1, (topic.solvedCount || 1) + borrowedSolved * 0.4)))
+        : (topic.avgSolvedRating || relatedAvgRating);
+      const enrichedTopic = {
+        ...topic,
+        relatedSolvedEquivalent: borrowedSolved,
+        relatedAttemptedEquivalent: borrowedAttempted,
+        relatedHardSolvedEquivalent: borrowedHard,
+        relatedEvidenceScore: Math.round(relatedEvidenceAverage * 100),
+        relatedSupportTopics: supportTopics
+          .sort((a, b) => b.weight - a.weight)
+          .slice(0, 4),
+        effectiveSolvedCount: round((topic.solvedCount || 0) + borrowedSolved, 2),
+        effectiveAttemptedCount: round((topic.attemptedCount || 0) + borrowedAttempted, 2),
+        effectiveHardSolvedCount: round((topic.hardSolvedCount || 0) + borrowedHard, 2),
+        effectiveEvidenceScore: Math.max(topic.evidenceScore || 0, Math.min(100, (topic.evidenceScore || 0) + evidenceBonus)),
+        effectiveAbilityScore: Math.round(100 * clamp(percentFeature(topic.abilityScore, 0) + abilityBlend, 0, 1)),
+        effectiveDifficultyScore: Math.round(100 * clamp(percentFeature(topic.difficultyScore, 0) + difficultyBlend + 0.035 * hardBonus, 0, 1)),
+        effectiveMaxSolvedRating: relatedMaxRating || topic.maxSolvedRating || null,
+        effectiveAvgSolvedRating,
+        affinityGate: round(gate, 2)
+      };
+
+      return withTopicStrength(enrichedTopic);
+    })
+    .sort(compareTopicStrength);
 }
 
 function aggregateTopics(statuses, now, topicCorpusStats, currentRating) {
@@ -1547,13 +1851,16 @@ function buildSummary(profile, submissions, statuses, now) {
   const solvedTodayKeys = new Set();
   const solvedThisWeekKeys = new Set();
   const solvedThisMonthKeys = new Set();
+  const solvedLast30dKeys = new Set();
   let solved30d = 0;
   let submissionsToday = 0;
   let submissionsThisWeek = 0;
   let submissionsThisMonth = 0;
+  let submissionsLast30d = 0;
   let okSubmissionsToday = 0;
   let okSubmissionsThisWeek = 0;
   let okSubmissionsThisMonth = 0;
+  let okSubmissionsLast30d = 0;
   let highestSolvedRating = 0;
 
   for (const status of statuses.values()) {
@@ -1571,6 +1878,7 @@ function buildSummary(profile, submissions, statuses, now) {
     const isToday = submittedDay === today;
     const isThisWeek = submittedAt >= weekStart;
     const isThisMonth = submittedAt >= monthStart;
+    const isLast30d = submittedAt.getTime() >= recentCutoff;
     const isAccepted = submission.verdict === "OK";
     const key = problemKey(submission.problem);
 
@@ -1585,7 +1893,8 @@ function buildSummary(profile, submissions, statuses, now) {
       submissionsThisMonth += 1;
       activeDaysThisMonth.add(submittedDay);
     }
-    if (submittedAt.getTime() >= recentCutoff) {
+    if (isLast30d) {
+      submissionsLast30d += 1;
       activeDays.add(submittedDay);
     }
 
@@ -1593,9 +1902,11 @@ function buildSummary(profile, submissions, statuses, now) {
       if (isToday) okSubmissionsToday += 1;
       if (isThisWeek) okSubmissionsThisWeek += 1;
       if (isThisMonth) okSubmissionsThisMonth += 1;
+      if (isLast30d) okSubmissionsLast30d += 1;
       if (key && isToday) solvedTodayKeys.add(key);
       if (key && isThisWeek) solvedThisWeekKeys.add(key);
       if (key && isThisMonth) solvedThisMonthKeys.add(key);
+      if (key && isLast30d) solvedLast30dKeys.add(key);
     }
   }
 
@@ -1620,12 +1931,15 @@ function buildSummary(profile, submissions, statuses, now) {
     solvedToday: solvedTodayKeys.size,
     solvedThisWeek: solvedThisWeekKeys.size,
     solvedThisMonth: solvedThisMonthKeys.size,
+    solvedLast30d: solvedLast30dKeys.size,
     submissionsToday,
     submissionsThisWeek,
     submissionsThisMonth,
+    submissionsLast30d,
     okSubmissionsToday,
     okSubmissionsThisWeek,
     okSubmissionsThisMonth,
+    okSubmissionsLast30d,
     solved30d,
     highestSolvedRating,
     dataConfidence: dataConfidence(totalSubmissions, uniqueSolved)
@@ -1685,6 +1999,7 @@ function analyzeProfile({ profile, submissions, ratingChanges, problemset, manua
   let topics = aggregateTopics(statuses, now, topicCorpusStats, currentRating);
   inferenceContext.topicsByName = new Map(topics.map((topic) => [topic.topic, topic]));
   topics = applyModelTopicScores(topics, problemMap, inferenceContext, currentRating);
+  topics = applyRelatedTopicEvidence(topics);
   inferenceContext.topicsByName = new Map(topics.map((topic) => [topic.topic, topic]));
   const stage = classifyLearningStage(summary, buckets, topics);
   const submissionCharts = aggregateSubmissionCharts(submissions);

@@ -55,11 +55,17 @@ Nen uu tien cac model de giai thich trong MVP:
 
 Ly do tach `strengthScore`: mot topic kho nhu `trees` co the chi co vai bai AC, nhung neu user da AC bai rating cao thi khong nen bi xep thap hon cac topic co nhieu bai de. Cong thuc moi uu tien peak rating da AC, nang luc theo rating, benchmark XGBoost va do on dinh, nhung van giu `evidence` de tranh danh gia qua cao khi du lieu qua mong.
 
+Tu ban `topic-affinity-v4` tro di, `strengthScore` co them Topic Affinity Graph. Moi topic co the muon nhe bang chung tu topic gan nhau, vi Codeforces tag khong phai luc nao cung dien ta dung ky nang. Vi du `trees` co the muon tu `graphs`, `dsu/mst`, `data structures`, `dynamic programming`, nhung chi khi user da co bai `trees` that. Phan muon bi chan tran va duoc hien trong UI bang "Bang chung lien quan".
+
+Tooltip dau `!` trong UI can tach ro: "Diem nam chu de" giai thich bang chung truc tiep, "Diem manh tong hop" giai thich diem xep hang mat manh, va "Bang chung lien quan" giai thich phan muon nhe tu topic gan nhau. Muc tieu la nguoi moi xem khong can biet XGBoost hay chi tiet code van hieu vi sao topic duoc xep cao/thap.
+
 ## Stack hien tai
 
 - Frontend: static HTML/CSS/JavaScript.
 - Analytics: JavaScript module chay trong browser.
 - Data: `public/data.js` cho problemset, RAM cho du lieu ca nhan trong tab hien tai.
+- Cache busting: `index.html` tu gan `?v=<appVersion>-<timestamp>` cho CSS/JS moi lan mo trang, nen double-click file van tranh tai nham asset cu.
+- Activity window: UI dung "30 ngay" rolling window thay vi "thang nay" theo lich, de dau thang khong xay ra canh tuan nay co bai nhung thang nay bang 0.
 - Localhost: Node `server.js` chi phuc vu file tinh.
 - Backend/database/queue: khong bat buoc cho MVP; de sau neu can cloud app multi-user.
 

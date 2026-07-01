@@ -87,7 +87,7 @@ async function codeforcesFetch(method, params = {}) {
 
     let response;
     try {
-      response = await fetch(url, { signal: controller.signal });
+      response = await fetch(url, { cache: "no-store", signal: controller.signal });
     } catch (error) {
       throw new Error(friendlyNetworkError(error));
     } finally {

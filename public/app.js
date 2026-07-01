@@ -129,7 +129,7 @@ const INFO_TEXTS = {
   dataConfidence:
     "Độ tin cậy dữ liệu cho biết hệ thống có đủ lịch sử để đánh giá chưa.\nCông thức gần đúng:\nconfidence = 0.55 * submissionConfidence + 0.45 * solvedConfidence\nTrong đó mỗi phần tăng chậm theo log khi có nhiều submit/bài AC hơn.\nHiểu đơn giản: dữ liệu càng nhiều thì kết luận càng đáng tin.",
   activity:
-    "Phần này trả lời nhanh hôm nay, tuần này, tháng này và tổng thể tài khoản đã làm bao nhiêu bài.\nBài đã làm = số bài khác nhau có verdict OK trong khoảng thời gian đang chọn.\nLần nộp = tổng số submission trong khoảng đó.\nMặc định hiển thị Hôm nay; lịch 12 tháng chỉ là phần phụ để xem thói quen dài hạn.",
+    "Phần này trả lời nhanh hôm nay, tuần này, 30 ngày qua và tổng thể tài khoản đã làm bao nhiêu bài.\nBài đã làm = số bài khác nhau có verdict OK trong khoảng thời gian đang chọn.\nDùng 30 ngày qua thay vì tháng lịch để tránh trường hợp đầu tháng: tuần này có bài từ cuối tháng trước nhưng tháng này vẫn bằng 0.\nMặc định hiển thị Hôm nay; lịch 12 tháng chỉ là phần phụ để xem thói quen dài hạn.",
   submissionTrend:
     "Dữ liệu được gom theo tuần.\nCông thức:\nacceptedWeek = số submission OK trong tuần\notherWeek = tổng submission không OK trong tuần\nHiểu đơn giản: giúp thấy khối lượng luyện và tỉ lệ thành công gần đây.",
   ratingHistory:
@@ -141,7 +141,9 @@ const INFO_TEXTS = {
   buckets:
     "Bài được chia theo nhóm độ khó Codeforces: 800-999, 1000-1199, ...\nCông thức:\nsolved(bucket) = số bài AC trong nhóm\nattemptedUnsolved(bucket) = số bài đã thử nhưng chưa AC\nDùng để biết bạn đang phủ tốt ở độ khó nào.",
   topicMastery:
-    "Bảng này liệt kê các chủ đề bạn đang nắm tốt nhất.\nĐiểm hiển thị là điểm mạnh tổng hợp từ 0-100: ưu tiên năng lực theo rating, bài khó đã AC, dự đoán bài mẫu, độ ổn định và độ tin cậy dữ liệu.\nHiểu đơn giản: một topic ít bài nhưng từng AC bài khó vẫn có thể được xếp cao, còn topic nhiều bài dễ sẽ không tự động đứng đầu.",
+    "Điểm nắm chủ đề mô tả mức nắm trực tiếp của bạn trong topic này.\nHệ thống nhìn các bài bạn đã AC/đã thử ở chính topic đó, độ khó đã chinh phục, độ ổn định khi submit, độ tin cậy dữ liệu và độ phủ luyện tập.\nHiểu đơn giản: điểm này trả lời bạn đang nắm topic này chắc tới đâu, nhưng không phải tiêu chí duy nhất để xếp bảng Chủ đề nắm tốt nhất.",
+  topicStrength:
+    "Điểm mạnh tổng hợp dùng để xếp hạng bảng Chủ đề nắm tốt nhất.\nĐiểm này không chỉ đếm số bài AC: nó ưu tiên bài khó đã AC, năng lực theo rating, dự đoán bài mẫu, độ ổn định, độ tin cậy và một phần bằng chứng liên quan từ topic gần nhau.\nHiểu đơn giản: đây là điểm xếp hạng mặt mạnh. Một topic khó có ít bài nhưng bài AC chất lượng cao vẫn có thể được xếp cao hơn topic làm nhiều bài dễ.",
   topicWeakness:
     "Bảng này chỉ hiện các chủ đề có điểm cần cải thiện từ 35 trở lên.\nĐiểm càng cao thì càng nên ưu tiên: 35-49 là theo dõi, 50-69 là cần ôn, 70+ là rất cần ôn.\nCác topic dưới 35 được xem là củng cố nhẹ nên không còn xuất hiện ở bảng này.",
   topicSolvedAttempted:
@@ -153,7 +155,9 @@ const INFO_TEXTS = {
   topicStability:
     "Độ ổn định đo bạn giải chủ đề này có chắc tay không.\nNếu bạn thường AC sau ít lần sai, ít TLE và ít bài bỏ dở thì điểm cao.\nNếu bạn vẫn giải được bài khó nhưng hay WA/TLE nhiều lần, điểm này sẽ thấp hơn năng lực.",
   topicEvidence:
-    "Độ tin cậy bằng chứng cho biết hệ thống đã có đủ dữ liệu về chủ đề này chưa.\nLàm nhiều bài, đặc biệt là bài có rating rõ ràng và đa dạng độ khó, sẽ tăng điểm này.\nNếu mới làm 1-2 bài dễ thì hệ thống sẽ dè dặt, không kết luận bạn đã rất mạnh ngay.",
+    "Độ tin cậy bằng chứng cho biết dữ liệu trực tiếp của topic này đã đủ dày chưa.\nLàm nhiều bài, đặc biệt là bài có rating rõ ràng và đa dạng độ khó, sẽ tăng điểm này.\nBằng chứng liên quan từ topic gần nhau được hiển thị riêng ở dòng Bằng chứng liên quan, không gộp vào con số này.",
+  topicRelatedEvidence:
+    "Bằng chứng liên quan là tín hiệu mượn nhẹ từ các topic gần nhau trong bản đồ quan hệ chủ đề.\nVí dụ một topic có thể nhận thêm một phần nhỏ từ các topic thường dùng chung kỹ năng hoặc cùng xuất hiện trong bài Codeforces.\nPhần này chỉ bật khi bạn đã có bài trực tiếp ở topic chính và luôn bị chặn trần, nên nó chỉ hỗ trợ xếp hạng chứ không thay thế bằng chứng thật.",
   topicWeightedAc:
     "AC có trọng số độ khó giống tỉ lệ AC, nhưng bài khó có trọng lượng lớn hơn bài dễ.\nAC bài khó giúp điểm tăng nhiều hơn. Khi bạn thử bài khó chưa AC, hệ thống cũng giảm bớt mức phạt so với cách đếm tỉ lệ AC thường.",
   topicDifficulty:
@@ -492,16 +496,16 @@ function buildActivityStats(activity, summary) {
     activeDays: summary.activeDaysThisWeek || 0
   };
   const monthStats = {
-    accepted: summary.solvedThisMonth || 0,
-    okSubmissions: summary.okSubmissionsThisMonth || 0,
-    submissions: summary.submissionsThisMonth || 0,
-    activeDays: summary.activeDaysThisMonth || 0
+    accepted: summary.solvedLast30d ?? summary.solved30d ?? summary.solvedThisMonth ?? 0,
+    okSubmissions: summary.okSubmissionsLast30d ?? summary.okSubmissionsThisMonth ?? 0,
+    submissions: summary.submissionsLast30d ?? summary.submissionsThisMonth ?? 0,
+    activeDays: summary.activeDays30d ?? summary.activeDaysThisMonth ?? 0
   };
 
   return {
     today: activityStat("today", "Hôm nay", "Hôm nay", todayStats, "bài AC hôm nay"),
     week: activityStat("week", "Tuần này", "Từ thứ Hai tuần này", weekStats, "bài AC tuần này"),
-    month: activityStat("month", "Tháng này", "Từ đầu tháng này", monthStats, "bài AC tháng này"),
+    month: activityStat("month", "30 ngày", "Trong 30 ngày gần nhất", monthStats, "bài AC trong 30 ngày"),
     all: activityStat("all", "Tổng thể", "Từ trước đến giờ", total, "bài đã AC")
   };
 }
@@ -611,13 +615,14 @@ function renderTopics(topics = []) {
               <span class="score">${score}</span>
             </summary>
             <div class="topic-detail-grid">
-              ${topicMetric("Điểm mạnh tổng hợp", `${score}/100`, "topicMastery")}
+              ${topicMetric("Điểm mạnh tổng hợp", `${score}/100`, "topicStrength")}
               ${topicMetric("Điểm nắm chủ đề", `${topic.masteryScore}/100`, "topicMastery")}
               ${topicMetric("Đã AC / đã thử", `${topic.solvedCount}/${topic.attemptedCount}`, "topicSolvedAttempted")}
               ${topicMetric("Năng lực theo rating", `${topic.abilityScore}/100`, "topicAbility")}
               ${topic.modelAbilityScore !== undefined ? topicMetric("Dự đoán bài mẫu", `${topic.modelAbilityScore}/100 · ${topic.modelSampleSize} bài`, "topicAiAbility") : ""}
               ${topicMetric("Độ ổn định", `${topic.stabilityScore}/100`, "topicStability")}
               ${topicMetric("Độ tin cậy bằng chứng", `${topic.evidenceScore}/100`, "topicEvidence")}
+              ${topic.relatedSolvedEquivalent ? topicMetric("Bằng chứng liên quan", formatRelatedEvidence(topic), "topicRelatedEvidence") : ""}
               ${topicMetric("AC có trọng số độ khó", percent(topic.difficultyAdjustedAccuracy), "topicWeightedAc")}
               ${topicMetric("Độ khó đã chinh phục", `${topic.difficultyScore}/100`, "topicDifficulty")}
               ${topicMetric("Rating hiệu dụng đã AC", formatRatingRange(topic.minSolvedRating, topic.maxSolvedRating, topic.avgSolvedRating), "topicEffectiveSolvedRating")}
@@ -840,6 +845,9 @@ function renderEmptyDashboard() {
       okSubmissionsToday: 0,
       okSubmissionsThisWeek: 0,
       okSubmissionsThisMonth: 0,
+      okSubmissionsLast30d: 0,
+      solvedLast30d: 0,
+      submissionsLast30d: 0,
       acRate: 0,
       activeDays30d: 0,
       activeDaysThisWeek: 0,
@@ -1224,6 +1232,18 @@ function formatRatingRange(min, max, center = null, centerLabel = "TB") {
   if (!min && !max && !center) return "-";
   const range = min && max ? `${min}-${max}` : String(min || max || "-");
   return center ? `${range} · ${centerLabel} ${center}` : range;
+}
+
+function formatRelatedEvidence(topic) {
+  const solved = Number(topic.relatedSolvedEquivalent || 0).toFixed(2).replace(/\.?0+$/, "");
+  const hard = Number(topic.relatedHardSolvedEquivalent || 0).toFixed(2).replace(/\.?0+$/, "");
+  const sources = (topic.relatedSupportTopics || [])
+    .slice(0, 3)
+    .map((item) => item.topic)
+    .join(", ");
+  const sourceText = sources ? ` từ ${sources}` : "";
+  const hardText = Number(topic.relatedHardSolvedEquivalent || 0) > 0 ? ` · +${hard} bài 1800+` : "";
+  return `+${solved} bài quy đổi${hardText}${sourceText}`;
 }
 
 function formatDaysSince(days) {

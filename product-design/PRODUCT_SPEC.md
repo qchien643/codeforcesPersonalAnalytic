@@ -73,6 +73,8 @@ API key/secret khong bat buoc cho MVP. Handle public la du cho analytics ca nhan
   "acRate": 0.42,
   "activeDays30d": 12,
   "solvedToday": 3,
+  "solvedThisWeek": 10,
+  "solvedLast30d": 24,
   "learningStage": "advanced",
   "dataConfidence": 0.96
 }
@@ -93,13 +95,26 @@ API key/secret khong bat buoc cho MVP. Handle public la du cho analytics ca nhan
   "modelAbilityScore": 80,
   "masteryScore": 74,
   "strengthScore": 78,
+  "strengthRawScore": 78.42,
   "weaknessScore": 31,
+  "relatedSolvedEquivalent": 2.25,
+  "relatedHardSolvedEquivalent": 0.85,
+  "effectiveEvidenceScore": 79,
+  "effectiveDifficultyScore": 86,
+  "relatedSupportTopics": [
+    { "topic": "graphs", "weight": 0.29 },
+    { "topic": "data structures", "weight": 0.21 }
+  ],
   "lastSolvedAt": "2026-06-20T10:00:00Z",
   "reason": "Coverage tot nhung gan day con nhieu WA."
 }
 ```
 
-`masteryScore` dùng để giải thích mức nắm hiện tại của topic. `strengthScore` dùng để sắp xếp bảng "Chủ đề nắm tốt nhất"; điểm này ưu tiên hơn cho bài khó đã AC, năng lực theo rating và dự đoán bài mẫu. `weaknessScore` dùng cho bảng "Chủ đề cần cải thiện"; bảng này chỉ hiện topic có `weaknessScore >= 35`.
+`masteryScore` dùng để giải thích mức nắm trực tiếp của topic. `strengthScore` dùng để sắp xếp bảng "Chủ đề nắm tốt nhất"; điểm này ưu tiên hơn cho bài khó đã AC, năng lực theo rating, dự đoán bài mẫu và một phần bằng chứng liên quan. `strengthRawScore` giữ điểm thô trước khi làm tròn để sort ổn định hơn khi nhiều topic cùng điểm hiển thị.
+
+`relatedSolvedEquivalent`, `relatedHardSolvedEquivalent` và `relatedSupportTopics` giải thích lượng tín hiệu mượn nhẹ từ topic gần nhau. Phần này chỉ bật khi người học đã có bài thật ở topic chính, bị chặn trần, và chỉ hỗ trợ `strengthScore`; nó không thay thế bài đã AC trực tiếp.
+
+`weaknessScore` dùng cho bảng "Chủ đề cần cải thiện"; bảng này chỉ hiện topic có `weaknessScore >= 35`.
 
 ### Một mục trong lộ trình học
 
@@ -298,20 +313,37 @@ reliability =
 strengthScore =
   clamp(
     100 * (
-      0.28 * modelAbilityScore
-      + 0.24 * abilityScore
-      + 0.18 * hard_proof
-      + 0.12 * stabilityScore
-      + 0.10 * masteryScore
-      + 0.06 * evidenceScore
-      + 0.04 * practice_depth
+      0.24 * modelAbilityScore
+      + 0.23 * abilityScore
+      + 0.24 * hard_proof
+      + 0.11 * stabilityScore
+      + 0.07 * masteryScore
+      + 0.05 * evidenceScore
+      + 0.06 * practice_depth
     ) * reliability,
     0,
     100
   )
 ```
 
-Lý do tách `strengthScore`: `masteryScore` thiên về mô tả trạng thái học tổng thể, còn `strengthScore` dùng cho ranking mặt mạnh. Nếu user AC ít bài nhưng trong đó có bài khó của topic, topic đó không nên bị xếp quá thấp chỉ vì coverage nhỏ. Ngược lại, topic làm nhiều bài dễ vẫn cần `ability/evidence/modelAbility` tốt mới đứng cao. Thang `peak_solved_rating_score` dùng khoảng 1500-3200 để tránh việc nhiều topic mạnh bị bão hòa 100 cùng lúc.
+Lý do tách `strengthScore`: `masteryScore` thiên về mô tả trạng thái học tổng thể, còn `strengthScore` dùng cho ranking mặt mạnh. Nếu user AC ít bài nhưng trong đó có bài khó của topic, topic đó không nên bị xếp quá thấp chỉ vì coverage nhỏ. Ngược lại, topic làm nhiều bài dễ vẫn cần `ability/evidence/modelAbility` tốt mới đứng cao. Thang `peak_solved_rating_score` dùng khoảng 1500-3200 để tránh việc nhiều topic mạnh bị bão hòa 100 cùng lúc. Hệ thống lưu thêm `strengthRawScore` để sort bằng điểm thô trước khi làm tròn, tránh nhiều topic cùng điểm hiển thị nhưng xếp sai.
+
+### Topic Affinity Graph
+
+Codeforces tag không phải ontology hoàn chỉnh: một bài "cây" có thể chỉ được gắn `graphs`, `dfs and similar`, `dsu` hoặc `data structures`. Vì vậy bảng "Chủ đề nắm tốt nhất" dùng thêm `TOPIC_AFFINITY_MAP` để mượn tín hiệu nhẹ giữa các topic gần nhau.
+
+```text
+gate(topic) =
+  0 nếu chưa có bài thật ở topic chính
+  0.25 nếu đã có ít nhất 1 bài thật
+  0.60-1.00 nếu đã có vài bài thật hoặc có bài khó đã AC
+
+effective_topic_signal =
+  direct_topic_signal
+  + gate(topic) * capped_sum(affinity_weight * neighbor_signal)
+```
+
+Ví dụ `trees` có thể mượn tín hiệu từ `graphs`, `dsu/mst`, `data structures`, `dynamic programming`, nhưng chỉ khi user đã có bài trực tiếp ở `trees`. Phần mượn bị chặn trần (`relatedSolvedEquivalent`, `relatedHardSolvedEquivalent`) để không biến topic liên quan thành bằng chứng chính. `weaknessScore` vẫn dựa chủ yếu vào dữ liệu trực tiếp để tránh kết luận yếu/sai từ tín hiệu mượn.
 
 ### Điểm yếu
 
@@ -416,6 +448,7 @@ Dữ liệu runtime:
 - `user.status`: tải từ Codeforces mỗi lần phân tích.
 - `user.rating`: tải từ Codeforces mỗi lần phân tích.
 - `localStorage.lastHandle`: chỉ ghi nhớ handle gần nhất để điền lại input.
+- `index.html`: tự gắn cache-busting timestamp cho `styles.css`, `data.js`, `cf_xgb_model.js`, `analytics.js`, `codeforces-api.js`, `app.js` mỗi lần mở trang.
 
 Chính sách lưu trữ:
 
@@ -423,6 +456,16 @@ Chính sách lưu trữ:
 - Không lưu submissions/rating/profile vào persistent cache.
 - Tắt tab thì dữ liệu cá nhân trong RAM mất.
 - Đổi handle không cần dọn cache lớn vì không có dữ liệu cá nhân persistent.
+- Khi double-click `index.html`, browser vẫn đọc lại các file CSS/JS bằng URL mới dạng `?v=<appVersion>-<timestamp>`, hạn chế lỗi dùng nhầm bản cũ.
+
+Chính sách khoảng thời gian của "Lịch hoạt động":
+
+- "Hôm nay": ngày hiện tại theo giờ local của trình duyệt.
+- "Tuần này": từ thứ Hai của tuần hiện tại.
+- "30 ngày": rolling window 30 ngày gần nhất, không phải tháng lịch.
+- "Tổng thể": toàn bộ lịch sử submission tải từ Codeforces.
+
+Lý do dùng rolling 30 ngày: ở đầu tháng, "tuần này" có thể bao gồm vài ngày cuối tháng trước, còn "tháng này" theo lịch lại bắt đầu từ ngày 1. Nếu dùng tháng lịch, UI có thể hiện tuần này 10 bài nhưng tháng này 0 bài; điều đó đúng về lịch nhưng dễ gây hiểu nhầm trong dashboard học tập.
 
 ## 9. Nguyên tắc giao diện
 
